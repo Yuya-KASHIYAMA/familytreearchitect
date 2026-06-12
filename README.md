@@ -1,4 +1,4 @@
-名称: FamilyTreeArchitect (Ver.2.8)
+名称: FamilyTreeArchitect (Ver.2.9)
 
 このHTMLは家系図を構築する目的のWebアプリとして github.com/Yuya-KASHIYAMA により制作された。
 
