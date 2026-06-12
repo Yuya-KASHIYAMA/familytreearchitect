@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FamilyTreeArchitect v2.9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
+<style>
+/* ── Reset & Base ───────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;
+  --fg:#0a0a0a;
+  --fg2:#555555;
+  --fg3:#999999;
+  --border:#d0d0d0;
+  --border2:#e8e8e8;
+  --node-w:120px;
+  --node-h:52px;
+  --gen-gap:130px;
+  --node-gap:150px;
+  --serif:'Noto Serif JP',serif;
+  --sans:'Noto Sans JP',sans-serif;
+  --mono:'IM Fell English',serif;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+#toolbar{
+  display:flex;align-items:center;gap:0;
+  height:44px;border-bottom:1px solid var(--border);
+  background:var(--bg);z-index:100;flex-shrink:0;
+  padding:0 12px;
+}
+#toolbar .logo{
+  font-family:var(--mono);font-size:15px;letter-spacing:0.02em;
+  margin-right:20px;white-space:nowrap;
+}
+#toolbar .logo span{font-size:11px;opacity:0.45;margin-left:4px;font-family:var(--sans)}
+.tb-sep{width:1px;height:22px;background:var(--border);margin:0 8px;flex-shrink:0}
+.tb-btn{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:4px;border:none;
+  background:transparent;cursor:pointer;font-size:12px;
+  color:var(--fg2);font-family:var(--sans);white-space:nowrap;
+  transition:background .15s,color .15s;
+}
+.tb-btn:hover{background:#f0f0f0;color:var(--fg)}
+.tb-btn.active{background:var(--fg);color:var(--bg)}
+.tb-btn svg{flex-shrink:0}
+
+/* Language / Writing mode switches */
+.mode-group{display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.mode-group .tb-btn{border-radius:0;border:none;padding:4px 9px;font-size:11px}
+.mode-group .tb-btn+.tb-btn{border-left:1px solid var(--border)}
+
+.tb-spacer{flex:1}
+
+/* ── Canvas ─────────────────────────────────────────────────── */
+#canvas-wrap{flex:1;position:relative;overflow:hidden}
+#svg-canvas{width:100%;height:100%;cursor:default}
+
+/* gen guide lines */
+.gen-guide{stroke:#f0f0f0;stroke-width:1;fill:none}
+.gen-label{font-size:10px;fill:#cccccc;font-family:var(--sans)}
+
+/* Edges — all path-based, orthogonal only */
+.e-marriage-line{stroke:var(--fg);stroke-width:1.2;fill:none}
+.e-parentchild{stroke:var(--fg);stroke-width:1.2;fill:none}
+.e-adopted{stroke:var(--fg);stroke-width:1.2;fill:none;stroke-dasharray:6 4;stroke-dashoffset:0}
+.e-symbol{font-size:18px;fill:var(--fg);font-family:var(--sans);dominant-baseline:central;text-anchor:middle}
+.e-symbol-cross{font-size:22px;fill:var(--fg);font-family:var(--sans);dominant-baseline:central;text-anchor:middle}
+
+/* Nodes */
+.node{cursor:pointer}
+.node rect,.node path,.node .node-shape{
+  fill:var(--bg);stroke:var(--fg);stroke-width:1.2;
+  transition:stroke-width .15s;
+}
+.node:hover rect,.node:hover path,.node:hover .node-shape{stroke-width:2.2}
+.node.selected rect,.node.selected path,.node.selected .node-shape{stroke-width:2.5;stroke:#444}
+.node-text-name{
+  fill:var(--fg);font-size:12px;dominant-baseline:central;text-anchor:middle;
+  pointer-events:none;
+}
+.node-text-maiden{
+  fill:var(--fg3);font-size:8px;dominant-baseline:central;text-anchor:middle;
+  pointer-events:none;
+}
+.node-text-sub{
+  fill:var(--fg3);font-size:9.5px;dominant-baseline:central;text-anchor:middle;
+  pointer-events:none;
+}
+
+/* ── Popup Menu ─────────────────────────────────────────────── */
+#popup{
+  position:fixed;display:none;z-index:200;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.1);
+  min-width:160px;padding:6px 0;
+  font-family:var(--sans);
+}
+#popup .popup-header{
+  padding:6px 14px 4px;font-size:10px;letter-spacing:.08em;
+  color:var(--fg3);text-transform:uppercase;border-bottom:1px solid var(--border2);
+  margin-bottom:4px;
+}
+#popup button{
+  display:block;width:100%;padding:7px 14px;text-align:left;
+  border:none;background:transparent;cursor:pointer;
+  font-size:12.5px;color:var(--fg);font-family:var(--sans);
+}
+#popup button:hover{background:#f5f5f5}
+#popup button.danger{color:#c0392b}
+#popup button.danger:hover{background:#fdf3f2}
+#popup .popup-sep{height:1px;background:var(--border2);margin:4px 0}
+
+/* ── Modal (Edit Person) ────────────────────────────────────── */
+#modal-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(10,10,10,.35);
+  display:none;align-items:center;justify-content:center;
+}
+#modal-overlay.open{display:flex}
+#modal{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;width:380px;max-width:calc(100vw - 40px);
+  padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.12);
+}
+#modal h2{font-size:15px;font-weight:500;margin-bottom:18px;font-family:var(--mono)}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;color:var(--fg3);margin-bottom:4px;letter-spacing:.04em}
+.form-row input,.form-row select{
+  width:100%;border:1px solid var(--border);border-radius:4px;
+  padding:7px 10px;font-size:13px;font-family:var(--sans);
+  background:var(--bg);color:var(--fg);outline:none;
+  transition:border-color .15s;
+}
+.form-row input:focus,.form-row select:focus{border-color:var(--fg)}
+.form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.modal-actions button{
+  padding:7px 18px;border-radius:4px;font-size:13px;cursor:pointer;
+  font-family:var(--sans);border:1px solid var(--border);
+  background:transparent;color:var(--fg);transition:background .15s;
+}
+.modal-actions button:hover{background:#f0f0f0}
+.modal-actions button.primary{
+  background:var(--fg);color:var(--bg);border-color:var(--fg);
+}
+.modal-actions button.primary:hover{background:#333}
+
+/* ── Status bar ─────────────────────────────────────────────── */
+#statusbar{
+  height:26px;border-top:1px solid var(--border2);
+  display:flex;align-items:center;padding:0 14px;gap:16px;
+  font-size:11px;color:var(--fg3);flex-shrink:0;background:var(--bg);
+}
+
+/* ── Zoom buttons ───────────────────────────────────────────── */
+#zoom-ctrl{
+  position:absolute;bottom:36px;right:16px;
+  display:flex;flex-direction:column;gap:4px;z-index:50;
+}
+#zoom-ctrl button{
+  width:30px;height:30px;border:1px solid var(--border);
+  border-radius:4px;background:var(--bg);cursor:pointer;
+  font-size:16px;display:flex;align-items:center;justify-content:center;
+  color:var(--fg2);transition:background .15s;
+}
+#zoom-ctrl button:hover{background:#f0f0f0}
+
+/* ── PDF progress overlay ───────────────────────────────────── */
+#pdf-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(10,10,10,.45);
+  display:none;align-items:center;justify-content:center;
+}
+#pdf-overlay.open{display:flex}
+#pdf-box{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:28px 32px;text-align:center;
+  min-width:220px;
+}
+#pdf-box p{font-size:13px;color:var(--fg2);margin-top:10px}
+.spinner{
+  width:28px;height:28px;border:2px solid var(--border2);
+  border-top-color:var(--fg);border-radius:50%;
+  animation:spin .7s linear infinite;margin:0 auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Edge subtype picker (inline popup extension) ───────────── */
+#edge-picker{
+  position:fixed;display:none;z-index:210;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.1);
+  min-width:170px;padding:6px 0;font-family:var(--sans);
+}
+#edge-picker .popup-header{
+  padding:6px 14px 4px;font-size:10px;letter-spacing:.08em;
+  color:var(--fg3);border-bottom:1px solid var(--border2);margin-bottom:4px;
+}
+#edge-picker button{
+  display:block;width:100%;padding:7px 14px;text-align:left;
+  border:none;background:transparent;cursor:pointer;
+  font-size:12.5px;color:var(--fg);font-family:var(--sans);
+}
+#edge-picker button:hover{background:#f5f5f5}
+#edge-picker button.active-item{font-weight:500;background:#f5f5f5}
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ──────────────────────────────────────────────── -->
+<div id="toolbar">
+  <div class="logo">FamilyTreeArchitect</div>
+  <div class="tb-sep"></div>
+
+  <!-- Language mode -->
+  <div class="mode-group" id="lang-group">
+    <button class="tb-btn" data-lang="jp">JP</button>
+    <button class="tb-btn active" data-lang="en">EN</button>
+    <button class="tb-btn" data-lang="mx">mix</button>
+  </div>
+  <div class="tb-sep"></div>
+
+  <!-- Writing mode -->
+  <div class="mode-group" id="write-group">
+    <button class="tb-btn active" data-write="h">横書き</button>
+    <button class="tb-btn" data-write="v">縦書き</button>
+  </div>
+  <div class="tb-sep"></div>
+
+  <!-- Detail toggle -->
+  <button class="tb-btn" id="btn-detail">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".7" fill="currentColor" stroke="none"/>
+    </svg>
+    詳細表示
+  </button>
+
+  <div class="tb-spacer"></div>
+
+  <!-- File ops -->
+  <button class="tb-btn" id="btn-save">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 2h8l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+      <polyline points="5,2 5,7 11,7 11,2"/><polyline points="4,11 12,11"/>
+    </svg>
+    保存
+  </button>
+  <label class="tb-btn" style="cursor:pointer">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M2 12v2h12v-2"/><polyline points="8,2 8,10"/><polyline points="5,7 8,10 11,7"/>
+    </svg>
+    読み込み
+    <input type="file" id="file-input" accept=".ftajson,.json" style="display:none">
+  </label>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-pdf">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="1" width="12" height="14" rx="1.5"/>
+      <line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/>
+      <line x1="5" y1="11" x2="8" y2="11"/>
+    </svg>
+    PDF出力
+  </button>
+</div>
+
+<!-- ── Canvas ───────────────────────────────────────────────── -->
+<div id="canvas-wrap">
+  <svg id="svg-canvas">
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#0a0a0a"/>
+      </marker>
+    </defs>
+    <g id="zoom-group">
+      <g id="layer-guides"></g>
+      <g id="layer-edges"></g>
+      <g id="layer-nodes"></g>
+    </g>
+  </svg>
+
+  <!-- Zoom controls -->
+  <div id="zoom-ctrl">
+    <button id="btn-zoomin" title="拡大">+</button>
+    <button id="btn-fit" title="全体表示" style="font-size:11px">⊡</button>
+    <button id="btn-zoomout" title="縮小">−</button>
+  </div>
+</div>
+
+<!-- ── Status bar ────────────────────────────────────────────── -->
+<div id="statusbar">
+  <span id="status-nodes">0 人</span>
+  <span id="status-gens">0 世代</span>
+  <span id="status-zoom">100%</span>
+  <span style="margin-left:auto;color:var(--fg3)">FamilyTreeArchitect Ver.2.9</span>
+</div>
+
+<!-- ── PDF Progress Overlay ──────────────────────────────────── -->
+<div id="pdf-overlay">
+  <div id="pdf-box">
+    <div class="spinner"></div>
+    <p id="pdf-status">PDFを生成中...</p>
+  </div>
+</div>
+
+<!-- ── Edge subtype picker ───────────────────────────────────── -->
+<div id="edge-picker">
+  <div class="popup-header">婚姻の種別</div>
+  <button data-subtype="normal">── 通常婚</button>
+  <button data-subtype="divorce_death">× 死別</button>
+  <button data-subtype="divorce_sep">／ 離別</button>
+  <div class="popup-sep" style="height:1px;background:#e8e8e8;margin:4px 0"></div>
+  <div class="popup-header" style="margin-top:4px">親子関係の種別</div>
+  <button data-subtype="biological">── 実子</button>
+  <button data-subtype="adopted">┄ 養子</button>
+</div>
+
+<!-- ── Popup Menu ────────────────────────────────────────────── -->
+<div id="popup">
+  <div class="popup-header" id="popup-name">—</div>
+  <button id="pop-add-father">父を追加</button>
+  <button id="pop-add-mother">母を追加</button>
+  <button id="pop-add-spouse">配偶者を追加</button>
+  <button id="pop-add-child">子を追加</button>
+  <div class="popup-sep"></div>
+  <button id="pop-edit">編集</button>
+  <button id="pop-edge">関係線を変更</button>
+  <button id="pop-delete" class="danger">削除</button>
+</div>
+
+<!-- ── Edit Modal ────────────────────────────────────────────── -->
+<div id="modal-overlay">
+  <div id="modal" style="width:480px;max-width:calc(100vw - 40px)">
+    <h2 id="modal-title">人物を編集</h2>
+    <p style="font-size:11px;color:var(--fg3);margin:-10px 0 14px;letter-spacing:.02em">全ての項目は任意です。</p>
+    <p style="font-size:10px;color:var(--fg3);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">日本語 / Japanese</p>
+    <div class="form-grid2">
+      <div class="form-row"><label>姓 (JP)</label><input type="text" id="f-lastJP" placeholder="山田"></div>
+      <div class="form-row"><label>ミドルネーム (JP)</label><input type="text" id="f-middleJP" placeholder=""></div>
+    </div>
+    <div class="form-grid2">
+      <div class="form-row"><label>名 (JP)</label><input type="text" id="f-firstJP" placeholder="太郎"></div>
+      <div class="form-row"><label>旧姓 (JP)</label><input type="text" id="f-maidenJP" placeholder="旧姓：鈴木"></div>
+    </div>
+    <p style="font-size:10px;color:var(--fg3);letter-spacing:.06em;margin:10px 0 8px;text-transform:uppercase">English</p>
+    <div class="form-grid2">
+      <div class="form-row"><label>Given Name (EN)</label><input type="text" id="f-firstEN" placeholder="Taro"></div>
+      <div class="form-row"><label>Middle Name (EN)</label><input type="text" id="f-middleEN" placeholder=""></div>
+    </div>
+    <div class="form-grid2">
+      <div class="form-row"><label>Family Name (EN)</label><input type="text" id="f-lastEN" placeholder="Yamada"></div>
+      <div class="form-row"><label>Maiden Name (EN)</label><input type="text" id="f-maidenEN" placeholder="née Suzuki"></div>
+    </div>
+    <p style="font-size:10px;color:var(--fg3);letter-spacing:.06em;margin:10px 0 8px;text-transform:uppercase">その他 / Other</p>
+    <div class="form-grid2">
+      <div class="form-row">
+        <label>性別 / Gender</label>
+        <select id="f-gender">
+          <option value="none">選択しない</option>
+          <option value="male">男性</option>
+          <option value="female">女性</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>場所 / Location</label>
+        <input type="text" id="f-location" placeholder="日本/Japan"
+          list="location-datalist" autocomplete="off"
+          style="-webkit-appearance:none;appearance:none">
+        <datalist id="location-datalist"></datalist>
+      </div>
+    </div>
+    <div class="form-grid2">
+      <div class="form-row"><label>生年</label><input type="text" id="f-birth" placeholder="1950"></div>
+      <div class="form-row"><label>没年</label><input type="text" id="f-death" placeholder="2020"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-cancel">キャンセル</button>
+      <button id="modal-ok" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edge Edit Modal ───────────────────────────────────────── -->
+<div id="edge-modal-overlay" style="position:fixed;inset:0;z-index:310;background:rgba(10,10,10,.35);display:none;align-items:center;justify-content:center;">
+  <div id="edge-modal" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;width:380px;max-width:calc(100vw - 40px);padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.12);">
+    <h2 style="font-size:15px;font-weight:500;margin-bottom:18px;font-family:var(--mono)" id="edge-modal-title">関係線を変更</h2>
+    <div id="edge-modal-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;max-height:280px;overflow-y:auto;"></div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button id="edge-modal-close" style="padding:7px 18px;border-radius:4px;font-size:13px;cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:transparent;color:var(--fg);">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Child-parent select Modal ─────────────────────────────── -->
+<div id="child-modal-overlay" style="position:fixed;inset:0;z-index:310;background:rgba(10,10,10,.35);display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;width:340px;max-width:calc(100vw - 40px);padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.12);">
+    <h2 style="font-size:15px;font-weight:500;margin-bottom:6px;font-family:var(--mono)">子を追加</h2>
+    <p style="font-size:12px;color:var(--fg3);margin-bottom:16px" id="child-modal-desc">もう一方の親を選択してください（なければスキップ）</p>
+    <div id="child-modal-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="child-modal-skip" style="padding:7px 14px;border-radius:4px;font-size:13px;cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:transparent;color:var(--fg);">スキップ（一人親）</button>
+      <button id="child-modal-cancel" style="padding:7px 14px;border-radius:4px;font-size:13px;cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:transparent;color:var(--fg);">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Parent-pair Modal (父/母追加時) ───────────────────────── -->
+<div id="parent-modal-overlay" style="position:fixed;inset:0;z-index:310;background:rgba(10,10,10,.35);display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;width:340px;max-width:calc(100vw - 40px);padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.12);">
+    <h2 style="font-size:15px;font-weight:500;margin-bottom:6px;font-family:var(--mono)" id="parent-modal-title">もう一方の親も追加</h2>
+    <p style="font-size:12px;color:var(--fg3);margin-bottom:16px">もう一方の親（配偶者）も同時に追加しますか？</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="parent-modal-yes" style="padding:7px 18px;border-radius:4px;font-size:13px;cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:var(--fg);color:var(--bg);">追加する</button>
+      <button id="parent-modal-no"  style="padding:7px 14px;border-radius:4px;font-size:13px;cursor:pointer;font-family:var(--sans);border:1px solid var(--border);background:transparent;color:var(--fg);">一人だけ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════════════
+//  STATE  (v2.6)
+// ══════════════════════════════════════════════════════════════
+const APP_VERSION='2.9';
+const STATE={nodes:[],edges:[],langMode:'en',writeMode:'h',showDetail:false,
+  nextNodeId:1, nextEdgeId:1}; // ノードIDとエッジIDを分離
+function uid(){  return 'n'+(STATE.nextNodeId++); }
+function eid(){  return 'e'+(STATE.nextEdgeId++); }
+
+STATE.nodes.push({id:'n0',
+  firstJP:'自分',middleJP:'',lastJP:'',maidenJP:'',
+  firstEN:'Self',middleEN:'',lastEN:'',maidenEN:'',
+  gender:'none',birth:'',death:'',location:'',generation:0,position:null});
+// nextNodeId=1 はSTATE初期値のまま（n0は手動設定なので）
+
+// ══════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const NW=120,NH=52,GEN_GAP=180,NODE_GAP=160;
+const VNODE_W=56,VNODE_H=110;
+const DOUBLE_GAP=5;
+const SNAP_THRESHOLD=40; // 世代スナップ閾値（px）— 小さいほどスナップしにくい
+// 8角形の面取りサイズ（male用）
+const CLIP=8;
+
+function isVertical(){ return STATE.writeMode==='v'; }
+function nodeW(){ return isVertical()?VNODE_W:NW; }
+function nodeH(){ return isVertical()?VNODE_H:NH; }
+
+// gen0=Y:0, gen+N=Y:-N*GEN_GAP(上), gen-N=Y:+N*GEN_GAP(下)
+function genYMap(){
+  const map={};
+  [...new Set(STATE.nodes.map(n=>n.generation))].forEach(g=>{ map[g]=-g*GEN_GAP; });
+  return map;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LAYOUT
+// ══════════════════════════════════════════════════════════════
+function computeLayout(){
+  const byGen={};
+  STATE.nodes.forEach(n=>{
+    if(!byGen[n.generation]) byGen[n.generation]=[];
+    byGen[n.generation].push(n);
+  });
+  Object.values(byGen).forEach(arr=>{
+    arr.sort((a,b)=>(parseInt(a.birth)||9999)-(parseInt(b.birth)||9999)||a.id.localeCompare(b.id));
+    STATE.edges.filter(e=>e.type==='marriage'&&!e.hidden).forEach(e=>{
+      const iA=arr.findIndex(n=>n.id===e.source);
+      const iB=arr.findIndex(n=>n.id===e.target);
+      if(iA<0||iB<0||Math.abs(iA-iB)<=1) return;
+      const [lo,hi]=iA<iB?[iA,iB]:[iB,iA];
+      arr.splice(lo+1,0,arr.splice(hi,1)[0]);
+    });
+  });
+  const yMap=genYMap();
+  STATE.nodes.forEach(n=>{
+    if(n.position){ n._x=n.position.x; n._y=n.position.y; return; }
+    const arr=byGen[n.generation];
+    const idx=arr.indexOf(n),total=arr.length;
+    n._x=(-total*NODE_GAP/2+NODE_GAP/2)+idx*NODE_GAP;
+    n._y=yMap[n.generation]??0;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DISPLAY
+// ══════════════════════════════════════════════════════════════
+function buildNameJP(n){
+  const p=[n.lastJP,n.middleJP,n.firstJP].filter(Boolean);
+  return p.join(' ')||buildNameEN(n)||'—';
+}
+function buildNameEN(n){
+  const p=[n.firstEN,n.middleEN,n.lastEN].filter(Boolean);
+  return p.join(' ')||buildNameJP_raw(n)||'—';
+}
+function buildNameJP_raw(n){
+  return [n.lastJP,n.middleJP,n.firstJP].filter(Boolean).join(' ');
+}
+function displayName(n){
+  if(!n) return '—';
+  if(STATE.langMode==='jp') return buildNameJP(n);
+  if(STATE.langMode==='en') return buildNameEN(n);
+  const loc=(n.location||'').toLowerCase();
+  return (loc.includes('日本')||loc.includes('japan'))?buildNameJP(n):buildNameEN(n);
+}
+function displayMaiden(n){
+  // 詳細表示オンのときのみ
+  if(!n||!STATE.showDetail) return '';
+  if(STATE.langMode==='jp') return n.maidenJP||'';
+  if(STATE.langMode==='en') return n.maidenEN||'';
+  const loc=(n.location||'').toLowerCase();
+  return (loc.includes('日本')||loc.includes('japan'))?(n.maidenJP||''):(n.maidenEN||'');
+}
+function displaySub(n){
+  if(!STATE.showDetail) return '';
+  const parts=[];
+  if(n.birth||n.death) parts.push((n.birth||'?')+(n.death?'–'+n.death:'–'));
+  if(n.location) parts.push(n.location);
+  return parts.join('  ');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NODE SHAPE PATH  (gender: none=rect, male=octagon, female=rounded)
+// ══════════════════════════════════════════════════════════════
+function nodeShapePath(gender,nw,nh){
+  const x=-nw/2, y=-nh/2, w=nw, h=nh;
+  if(gender==='male'){
+    // 四隅を45度カット（8角形）
+    const c=CLIP;
+    return `M${x+c},${y} L${x+w-c},${y} L${x+w},${y+c} L${x+w},${y+h-c} L${x+w-c},${y+h} L${x+c},${y+h} L${x},${y+h-c} L${x},${y+c} Z`;
+  }
+  if(gender==='female'){
+    // 角丸（rx=10）→ pathで描く
+    const r=10;
+    return `M${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x+r},${y+h} Q${x},${y+h} ${x},${y+h-r} L${x},${y+r} Q${x},${y} ${x+r},${y} Z`;
+  }
+  // none: 普通の長方形
+  return `M${x},${y} L${x+w},${y} L${x+w},${y+h} L${x},${y+h} Z`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  D3 SETUP
+// ══════════════════════════════════════════════════════════════
+const svg       =d3.select('#svg-canvas');
+const zoomGroup =svg.select('#zoom-group');
+const layerGuides=zoomGroup.select('#layer-guides');
+const layerEdges =zoomGroup.select('#layer-edges');
+const layerNodes =zoomGroup.select('#layer-nodes');
+
+const zoom=d3.zoom().scaleExtent([0.05,4]).on('zoom',ev=>{
+  zoomGroup.attr('transform',ev.transform);
+  document.getElementById('status-zoom').textContent=Math.round(ev.transform.k*100)+'%';
+});
+svg.call(zoom);
+svg.on('dblclick.zoom',null);
+
+// ══════════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════════
+let _selectedId=null;
+
+function render(){
+  computeLayout();
+  const nw=nodeW(),nh=nodeH();
+  const yMap=genYMap();
+  const gens=Object.keys(yMap).map(Number).sort((a,b)=>b-a);
+
+  // ── Guide lines: ノード上辺ライン（スナップ基準と一致） ──
+  layerGuides.selectAll('*').remove();
+  gens.forEach(g=>{
+    const cy=yMap[g]; // ノード中心Y = スナップ基準
+    const lineY=cy-nh/2; // ノード上辺
+    layerGuides.append('line').attr('class','gen-guide')
+      .attr('x1',-5000).attr('x2',5000).attr('y1',lineY).attr('y2',lineY);
+    layerGuides.append('text').attr('class','gen-label')
+      .attr('x',-4990).attr('y',lineY+10)
+      .text('Gen '+(g>0?'+':'')+g);
+  });
+
+  renderEdges(nh,nw);
+
+  // ── Nodes ──
+  const nodeSel=layerNodes.selectAll('.node').data(STATE.nodes,d=>d.id);
+  nodeSel.exit().remove();
+
+  const nodeEnter=nodeSel.enter().append('g').attr('class','node')
+    .call(d3.drag()
+      .on('start',function(){ d3.select(this).raise(); })
+      .on('drag',(e,d)=>{
+        const ym=genYMap(); const ys=Object.values(ym);
+        let sy=e.y;
+        if(ys.length){
+          const near=ys.reduce((b,y)=>Math.abs(y-e.y)<Math.abs(b-e.y)?y:b,ys[0]);
+          sy=Math.abs(near-e.y)<SNAP_THRESHOLD?near:e.y;
+        }
+        d.position={x:e.x,y:sy}; d._x=e.x; d._y=sy; render();
+      })
+      .on('end',()=>render())
+    )
+    .on('click',(e,d)=>{ e.stopPropagation(); _selectedId=d.id; render(); showPopup(e,d); });
+
+  // ノード形状はpathで（gender対応のため）
+  nodeEnter.append('path').attr('class','node-shape');
+  nodeEnter.append('text').attr('class','node-text-maiden');
+  nodeEnter.append('text').attr('class','node-text-name');
+  nodeEnter.append('text').attr('class','node-text-sub');
+
+  const nodeAll=nodeEnter.merge(nodeSel);
+  nodeAll.attr('transform',d=>`translate(${d._x},${d._y})`)
+         .attr('class',d=>'node'+(d.id===_selectedId?' selected':''));
+
+  nodeAll.each(function(d){
+    d3.select(this).select('.node-shape')
+      .attr('d', nodeShapePath(d.gender,nw,nh));
+
+    const sub=displaySub(d);
+    const maiden=displayMaiden(d);
+    const maidenEl=d3.select(this).select('.node-text-maiden');
+    const nameEl  =d3.select(this).select('.node-text-name');
+    const subEl   =d3.select(this).select('.node-text-sub');
+
+    if(isVertical()){
+      const name=displayName(d);
+      const isJP=STATE.langMode==='jp'||(STATE.langMode==='mx'&&
+        ((d.location||'').toLowerCase().includes('日本')||(d.location||'').toLowerCase().includes('japan')));
+      if(isJP){
+        removeFO(d3.select(this));
+        renderVerticalJP(d3.select(this),name,maiden,sub,nw,nh);
+        maidenEl.text(''); nameEl.text(''); subEl.text('');
+      } else {
+        removeFO(d3.select(this));
+        maidenEl.attr('transform','rotate(90)').attr('x',0).attr('y',maiden?-16:-999)
+          .text(maiden?`née ${maiden}`:'').style('font-size','8px').style('fill','#999');
+        nameEl.attr('transform','rotate(90)').attr('x',0).attr('y',sub?-6:0)
+          .text(name).style('font-size','11px');
+        subEl.attr('transform','rotate(90)').attr('x',0).attr('y',sub?8:0)
+          .text(sub).style('font-size','9px');
+      }
+    } else {
+      removeFO(d3.select(this));
+      const hasMaiden=!!maiden, hasSub=!!sub;
+      let maidenY=-999,nameY=0,subY=0;
+      if(hasMaiden&&hasSub)  { maidenY=-14; nameY=-2; subY=10; }
+      else if(hasMaiden)     { maidenY=-10; nameY=4; }
+      else if(hasSub)        { nameY=-7; subY=6; }
+      maidenEl.attr('transform',null).attr('x',0).attr('y',maidenY)
+        .text(hasMaiden?`（旧姓: ${maiden}）`:'').style('font-size','8px').style('fill','#999');
+      nameEl.attr('transform',null).attr('x',0).attr('y',nameY)
+        .text(displayName(d)).style('font-size','12px');
+      subEl.attr('transform',null).attr('x',0).attr('y',subY)
+        .text(sub).style('font-size','9.5px');
+    }
+  });
+
+  document.getElementById('status-nodes').textContent=STATE.nodes.length+' 人';
+  document.getElementById('status-gens').textContent=
+    new Set(STATE.nodes.map(n=>n.generation)).size+' 世代';
+}
+
+function renderVerticalJP(gSel,name,maiden,sub,nw,nh){
+  removeFO(gSel);
+  const fo=gSel.append('foreignObject')
+    .attr('x',-nw/2).attr('y',-nh/2).attr('width',nw).attr('height',nh);
+  const div=fo.append('xhtml:div')
+    .style('width',nw+'px').style('height',nh+'px')
+    .style('display','flex').style('align-items','center').style('justify-content','center')
+    .style('writing-mode','vertical-rl').style('text-orientation','mixed')
+    .style('font-family','Noto Sans JP,sans-serif').style('font-size','12px')
+    .style('color','#0a0a0a').style('pointer-events','none').style('overflow','hidden');
+  if(maiden) div.append('xhtml:span').style('font-size','8px').style('color','#999').text(`旧${maiden}`);
+  div.append('xhtml:span').text(name);
+  if(sub) div.append('xhtml:span').style('font-size','9px').style('color','#999').text(sub);
+}
+function removeFO(gSel){ gSel.selectAll('foreignObject').remove(); }
+
+// ══════════════════════════════════════════════════════════════
+//  EDGE RENDERING
+// ══════════════════════════════════════════════════════════════
+function renderEdges(nh,nw){
+  layerEdges.selectAll('*').remove();
+
+  // ── Couple map ──
+  const coupleMap=new Map();
+  STATE.edges.filter(e=>e.type==='marriage'&&!e.hidden).forEach(e=>{
+    const a=STATE.nodes.find(n=>n.id===e.source);
+    const b=STATE.nodes.find(n=>n.id===e.target);
+    if(!a||!b) return;
+    const [L,R]=a._x<=b._x?[a,b]:[b,a];
+    coupleMap.set(L.id+'|'+R.id,{edge:e,L,R,midX:(L._x+R._x)/2,midY:(L._y+R._y)/2});
+  });
+
+  // ── 1. Marriage lines ──
+  // 折り点: midX（左右ノードの中点）で折れるv2.6方式
+  // <path> + stroke-linejoin="miter" でコーナーを完全接続
+  coupleMap.forEach(({edge,L,R,midX,midY})=>{
+    const yL=L._y, yR=R._y;
+    const x1=L._x+nw/2, x2=R._x-nw/2;
+    const sameY=Math.abs(yL-yR)<2;
+    const D=DOUBLE_GAP/2; // 2.5px
+
+    if(sameY){
+      // 同じ高さ：水平二重線
+      [-D,D].forEach(dy=>{
+        layerEdges.append('line').attr('class','e-marriage-line')
+          .attr('x1',x1).attr('y1',yL+dy).attr('x2',x2).attr('y2',yL+dy);
+      });
+    } else {
+      // 異なる高さ：midXで直角に2回曲がるZ字型
+      // 各線を<path>1本で描き stroke-linejoin=miter でコーナー完全接続
+      // 線の方向：x1(yL) → midX(yL) → midX(yR) → x2(yR)
+      [-D,D].forEach(dy=>{
+        const mx=midX+dy;
+        const d=`M${x1},${yL+dy} L${mx},${yL+dy} L${mx},${yR+dy} L${x2},${yR+dy}`;
+        layerEdges.append('path').attr('class','e-marriage-line')
+          .attr('d',d).attr('stroke-linejoin','miter').attr('fill','none');
+      });
+    }
+
+    // 離婚記号：水平部分の中央に表示
+    const symX=(x1+x2)/2;
+    const symY=sameY?yL:midY;
+    if(edge.subtype==='divorce_death'){
+      layerEdges.append('text').attr('class','e-symbol e-symbol-cross')
+        .attr('x',symX).attr('y',symY).text('×');
+    } else if(edge.subtype==='divorce_sep'){
+      layerEdges.append('text').attr('class','e-symbol')
+        .attr('x',symX).attr('y',symY).text('／');
+    }
+  });
+
+  // ── 2. Family groups ──
+  const familyMap=new Map();
+  STATE.edges.filter(e=>e.type==='parent-child'&&!e.hidden).forEach(e=>{
+    const parent=STATE.nodes.find(n=>n.id===e.source);
+    const child =STATE.nodes.find(n=>n.id===e.target);
+    if(!parent||!child) return;
+
+    const sibEdges=STATE.edges.filter(
+      se=>se.type==='parent-child'&&!se.hidden&&se.target===child.id&&se.source!==parent.id);
+
+    let famKey,coupleInfo=null;
+    if(sibEdges.length>0){
+      const opId=sibEdges[0].source;
+      const marEdge=STATE.edges.find(me=>me.type==='marriage'&&!me.hidden&&
+        ((me.source===parent.id&&me.target===opId)||(me.source===opId&&me.target===parent.id)));
+      if(marEdge){
+        const op=STATE.nodes.find(n=>n.id===opId);
+        const [LL,RR]=parent._x<=op._x?[parent,op]:[op,parent];
+        famKey=LL.id+'|'+RR.id;
+        coupleInfo=coupleMap.get(famKey)||null;
+        if(!coupleInfo) famKey=parent.id+'_solo_'+child.id;
+      } else {
+        famKey=parent.id+'_solo_'+child.id;
+      }
+    } else {
+      famKey=parent.id+'_solo';
+    }
+
+    if(!familyMap.has(famKey)){
+      familyMap.set(famKey,{coupleInfo,soloParent:coupleInfo?null:parent,children:[]});
+    }
+    const fam=familyMap.get(famKey);
+    if(!fam.children.find(c=>c.node.id===child.id)){
+      fam.children.push({node:child,adopted:e.subtype==='adopted'});
+    }
+  });
+
+  // ── 3. Draw branches ──
+  familyMap.forEach(fam=>{
+    if(!fam.children.length) return;
+    let originX,originY;
+    if(fam.coupleInfo){
+      originX=fam.coupleInfo.midX;
+      // 婚姻二重線の下側から出発（両親のY平均 + DOUBLE_GAP/2）
+      originY=fam.coupleInfo.midY+DOUBLE_GAP/2;
+    } else {
+      originX=fam.soloParent._x;
+      originY=fam.soloParent._y+nh/2;
+    }
+
+    // 折れ曲がりY = originY と 子ノード群上辺の最小値の中点
+    // → 縦書き・横書き切り替えに関係なく「親下辺〜子上辺の中間」に固定される
+    const childTopY=Math.min(...fam.children.map(c=>c.node._y-nh/2));
+    const branchY=(originY+childTopY)/2;
+
+    const children=fam.children;
+    const allAdopted=children.every(c=>c.adopted);
+    const trunkCls=allAdopted?'e-adopted':'e-parentchild';
+
+    // 幹線：origin → branchY
+    layerEdges.append('line').attr('class',trunkCls)
+      .attr('x1',originX).attr('y1',originY).attr('x2',originX).attr('y2',branchY);
+
+    if(children.length===1){
+      const child=children[0];
+      const cx=child.node._x;
+      const cls=child.adopted?'e-adopted':'e-parentchild';
+      if(Math.abs(cx-originX)>2){
+        layerEdges.append('line').attr('class',cls)
+          .attr('x1',originX).attr('y1',branchY).attr('x2',cx).attr('y2',branchY);
+      }
+      layerEdges.append('line').attr('class',cls)
+        .attr('x1',cx).attr('y1',branchY).attr('x2',cx).attr('y2',child.node._y-nh/2);
+    } else {
+      const xs=children.map(c=>c.node._x);
+      const barL=Math.min(...xs,originX),barR=Math.max(...xs,originX);
+      layerEdges.append('line').attr('class','e-parentchild')
+        .attr('x1',barL).attr('y1',branchY).attr('x2',barR).attr('y2',branchY);
+      children.forEach(child=>{
+        const cx=child.node._x;
+        const cls=child.adopted?'e-adopted':'e-parentchild';
+        layerEdges.append('line').attr('class',cls)
+          .attr('x1',cx).attr('y1',branchY).attr('x2',cx).attr('y2',child.node._y-nh/2);
+      });
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  POPUP
+// ══════════════════════════════════════════════════════════════
+const popup=document.getElementById('popup');
+let _popupNode=null;
+function showPopup(event,d){
+  _popupNode=d;
+  document.getElementById('popup-name').textContent=displayName(d);
+  popup.style.display='block';
+  const pw=popup.offsetWidth||180,ph=popup.offsetHeight||260;
+  const cx=event.sourceEvent?event.sourceEvent.clientX:event.clientX;
+  const cy=event.sourceEvent?event.sourceEvent.clientY:event.clientY;
+  popup.style.left=Math.min(cx+8,window.innerWidth-pw-8)+'px';
+  popup.style.top =Math.min(cy-10,window.innerHeight-ph-8)+'px';
+}
+function hidePopup(){ popup.style.display='none'; _popupNode=null; }
+svg.on('click',()=>hidePopup());
+
+document.getElementById('pop-add-father').addEventListener('click',()=>{
+  if(!_popupNode) return; const r=_popupNode; hidePopup(); startAddParent(r,'male'); });
+document.getElementById('pop-add-mother').addEventListener('click',()=>{
+  if(!_popupNode) return; const r=_popupNode; hidePopup(); startAddParent(r,'female'); });
+document.getElementById('pop-add-spouse').addEventListener('click',()=>{
+  if(!_popupNode) return; const ref=_popupNode; hidePopup();
+  // デフォルト性別：相手の逆（none→none）
+  const sg=ref.gender==='male'?'female':ref.gender==='female'?'male':'none';
+  const sn=createNode(ref.generation,sg,ref._x+NODE_GAP,ref._y);
+  STATE.edges.push({id:eid(),source:ref.id,target:sn.id,type:'marriage',subtype:'normal'});
+  openPersonModal(sn,true,null);
+});
+document.getElementById('pop-add-child').addEventListener('click',()=>{
+  if(!_popupNode) return; const r=_popupNode; hidePopup(); openChildModal(r); });
+document.getElementById('pop-edit').addEventListener('click',()=>{
+  if(!_popupNode) return; const n=_popupNode; hidePopup(); openPersonModal(n,false,null); });
+document.getElementById('pop-edge').addEventListener('click',()=>{
+  if(!_popupNode) return; const n=_popupNode; hidePopup(); openEdgeModal(n); });
+document.getElementById('pop-delete').addEventListener('click',()=>{
+  if(!_popupNode) return; deleteNode(_popupNode.id); hidePopup(); });
+
+// ══════════════════════════════════════════════════════════════
+//  NODE OPERATIONS
+// ══════════════════════════════════════════════════════════════
+function createNode(generation,gender,posX,posY){
+  const id=uid();
+  const pos=(posX!==undefined)?{x:posX,y:posY??(-generation*GEN_GAP)}:null;
+  const n={id,firstJP:'',middleJP:'',lastJP:'',maidenJP:'',
+    firstEN:'',middleEN:'',lastEN:'',maidenEN:'',
+    gender:gender||'none',birth:'',death:'',location:'',generation,position:pos};
+  STATE.nodes.push(n); return n;
+}
+function deleteNode(id){
+  if(id==='n0'){alert('起点の「自分」は削除できません。');return;}
+  STATE.nodes=STATE.nodes.filter(n=>n.id!==id);
+  STATE.edges=STATE.edges.filter(e=>e.source!==id&&e.target!==id);
+  _selectedId=null; render();
+}
+
+// 父/母追加
+const _pp={ref:null,node:null,gender:null};
+function startAddParent(refNode,gender){
+  _pp.ref=refNode; _pp.gender=gender;
+  const yMap=genYMap();
+  const parentY=yMap[refNode.generation+1]??-(refNode.generation+1)*GEN_GAP;
+  _pp.node=createNode(refNode.generation+1,gender,refNode._x,parentY);
+  STATE.edges.push({id:eid(),source:_pp.node.id,target:refNode.id,type:'parent-child',subtype:'biological'});
+  openPersonModal(_pp.node,true,()=>{
+    const ol=_pp.gender==='male'?'母':'父';
+    document.getElementById('parent-modal-title').textContent=`もう一方の親（${ol}）も追加しますか？`;
+    document.getElementById('parent-modal-overlay').style.display='flex';
+  });
+}
+document.getElementById('parent-modal-yes').addEventListener('click',()=>{
+  document.getElementById('parent-modal-overlay').style.display='none';
+  if(!_pp.ref){render();return;}
+  const og=_pp.gender==='male'?'female':'male';
+  const other=createNode(_pp.ref.generation+1,og,_pp.node._x+NODE_GAP,_pp.node._y);
+  STATE.edges.push({id:eid(),source:_pp.node.id,target:other.id,type:'marriage',subtype:'normal'});
+  STATE.edges.push({id:eid(),source:other.id,target:_pp.ref.id,type:'parent-child',subtype:'biological'});
+  _pp.ref=null;_pp.node=null;_pp.gender=null;
+  openPersonModal(other,true,null);
+});
+document.getElementById('parent-modal-no').addEventListener('click',()=>{
+  document.getElementById('parent-modal-overlay').style.display='none';
+  _pp.ref=null;_pp.node=null;_pp.gender=null; render();
+});
+
+// 子追加
+let _pendingChildRef=null;
+function openChildModal(refNode){
+  _pendingChildRef=refNode;
+  const spouses=[];
+  STATE.edges.filter(e=>e.type==='marriage'&&!e.hidden).forEach(e=>{
+    if(e.source===refNode.id){const s=STATE.nodes.find(n=>n.id===e.target);if(s)spouses.push(s);}
+    if(e.target===refNode.id){const s=STATE.nodes.find(n=>n.id===e.source);if(s)spouses.push(s);}
+  });
+  const list=document.getElementById('child-modal-list');
+  list.innerHTML='';
+  document.getElementById('child-modal-desc').textContent=
+    spouses.length?'もう一方の親（配偶者）を選択：':'配偶者未登録 — 一人親として追加します。';
+  spouses.forEach(sp=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='width:100%;padding:8px 12px;text-align:left;border:1px solid #e8e8e8;border-radius:5px;background:#fff;cursor:pointer;font-size:13px;margin-bottom:4px;';
+    btn.textContent=displayName(sp)+(sp.birth?' ('+sp.birth+')':'');
+    btn.addEventListener('click',()=>{
+      document.getElementById('child-modal-overlay').style.display='none';
+      finishAddChild(refNode,sp);_pendingChildRef=null;
+    });
+    list.appendChild(btn);
+  });
+  document.getElementById('child-modal-overlay').style.display='flex';
+}
+document.getElementById('child-modal-skip').addEventListener('click',()=>{
+  document.getElementById('child-modal-overlay').style.display='none';
+  if(_pendingChildRef){finishAddChild(_pendingChildRef,null);_pendingChildRef=null;}
+});
+document.getElementById('child-modal-cancel').addEventListener('click',()=>{
+  document.getElementById('child-modal-overlay').style.display='none'; _pendingChildRef=null;
+});
+function finishAddChild(p1,p2){
+  const child=createNode(p1.generation-1,'none',p1._x,p1._y+GEN_GAP);
+  STATE.edges.push({id:eid(),source:p1.id,target:child.id,type:'parent-child',subtype:'biological'});
+  if(p2) STATE.edges.push({id:eid(),source:p2.id,target:child.id,type:'parent-child',subtype:'biological'});
+  openPersonModal(child,true,null);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PERSON MODAL
+// ══════════════════════════════════════════════════════════════
+let _modalNode=null,_isNewNode=false,_modalCB=null;
+function openPersonModal(node,isNew,callback){
+  _modalNode=node; _isNewNode=isNew; _modalCB=callback;
+  document.getElementById('modal-title').textContent=isNew?'人物を追加':'人物を編集';
+  const flds={
+    'f-lastJP':node.lastJP||'','f-firstJP':node.firstJP||'','f-middleJP':node.middleJP||'','f-maidenJP':node.maidenJP||'',
+    'f-firstEN':node.firstEN||'','f-middleEN':node.middleEN||'','f-lastEN':node.lastEN||'','f-maidenEN':node.maidenEN||'',
+    'f-gender':node.gender||'none','f-birth':node.birth||'','f-death':node.death||'','f-location':node.location||'',
+  };
+  Object.entries(flds).forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el.tagName==='SELECT') el.value=val; else el.value=val;
+  });
+  // datalist 更新
+  const dl=document.getElementById('location-datalist');
+  dl.innerHTML='';
+  [...new Set(STATE.nodes.map(n=>n.location).filter(Boolean))].forEach(loc=>{
+    const o=document.createElement('option'); o.value=loc; dl.appendChild(o);
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-lastJP').focus(),50);
+}
+document.getElementById('modal-cancel').addEventListener('click',()=>{
+  document.getElementById('modal-overlay').classList.remove('open');
+  if(_isNewNode&&_modalNode){
+    STATE.nodes=STATE.nodes.filter(n=>n.id!==_modalNode.id);
+    STATE.edges=STATE.edges.filter(e=>e.source!==_modalNode.id&&e.target!==_modalNode.id);
+    _pp.ref=null;_pp.node=null;_pp.gender=null;
+    render();
+  }
+  _modalNode=null;_isNewNode=false;_modalCB=null;
+});
+document.getElementById('modal-ok').addEventListener('click',()=>{
+  if(!_modalNode) return;
+  ['lastJP','firstJP','middleJP','maidenJP','firstEN','middleEN','lastEN','maidenEN'].forEach(k=>{
+    _modalNode[k]=(document.getElementById('f-'+k)||{value:''}).value.trim();
+  });
+  _modalNode.gender  =document.getElementById('f-gender').value;
+  _modalNode.birth   =document.getElementById('f-birth').value.trim();
+  _modalNode.death   =document.getElementById('f-death').value.trim();
+  _modalNode.location=document.getElementById('f-location').value.trim();
+  document.getElementById('modal-overlay').classList.remove('open');
+  render();
+  const cb=_modalCB; _modalNode=null;_isNewNode=false;_modalCB=null;
+  if(cb) setTimeout(cb,50);
+});
+document.getElementById('modal-overlay').addEventListener('click',function(e){
+  if(e.target===this) document.getElementById('modal-cancel').click();
+});
+
+// ══════════════════════════════════════════════════════════════
+//  EDGE MODAL
+// ══════════════════════════════════════════════════════════════
+function openEdgeModal(node){
+  const relEdges=STATE.edges.filter(e=>e.source===node.id||e.target===node.id);
+  const list=document.getElementById('edge-modal-list');
+  list.innerHTML='';
+  if(!relEdges.length){
+    list.innerHTML='<p style="font-size:12px;color:#999;padding:4px 0">関係線がありません。</p>';
+  }
+  relEdges.forEach(edge=>{
+    const otherId=edge.source===node.id?edge.target:edge.source;
+    const other=STATE.nodes.find(n=>n.id===otherId);
+    const isMar=edge.type==='marriage';
+    const label=isMar?`婚姻: ${displayName(other)}`:`親子 ${edge.source===node.id?'→':'←'} ${displayName(other)}`;
+    const opts=isMar
+      ?[['normal','── 通常婚'],['divorce_death','× 死別'],['divorce_sep','／ 離別']]
+      :[['biological','── 実子'],['adopted','┄ 養子']];
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid #e8e8e8;border-radius:5px;margin-bottom:4px;flex-wrap:wrap;';
+    const info=document.createElement('span');
+    info.style.cssText='flex:1;font-size:12px;color:#555;min-width:100px;';
+    info.textContent=label;
+    const sel=document.createElement('select');
+    sel.style.cssText='font-size:12px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:3px;background:#fff;cursor:pointer;color:#0a0a0a;';
+    opts.forEach(([val,lbl])=>{
+      const o=document.createElement('option');
+      o.value=val;o.textContent=lbl;if(val===edge.subtype)o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change',()=>{edge.subtype=sel.value;render();});
+    const hideLbl=document.createElement('label');
+    hideLbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:12px;color:#777;cursor:pointer;white-space:nowrap;';
+    const hideChk=document.createElement('input');
+    hideChk.type='checkbox';hideChk.checked=!!edge.hidden;
+    hideChk.addEventListener('change',()=>{edge.hidden=hideChk.checked;render();});
+    hideLbl.appendChild(hideChk);
+    hideLbl.appendChild(document.createTextNode('非表示'));
+    row.appendChild(info);row.appendChild(sel);row.appendChild(hideLbl);
+    list.appendChild(row);
+  });
+  document.getElementById('edge-modal-title').textContent=`関係線を変更 — ${displayName(node)}`;
+  document.getElementById('edge-modal-overlay').style.display='flex';
+}
+document.getElementById('edge-modal-close').addEventListener('click',()=>{
+  document.getElementById('edge-modal-overlay').style.display='none';
+});
+document.getElementById('edge-modal-overlay').addEventListener('click',function(e){
+  if(e.target===this) this.style.display='none';
+});
+
+// ══════════════════════════════════════════════════════════════
+//  TOOLBAR
+// ══════════════════════════════════════════════════════════════
+document.querySelectorAll('[data-lang]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    STATE.langMode=btn.dataset.lang;
+    document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b===btn));
+    render();
+  });
+});
+document.querySelectorAll('[data-write]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    STATE.writeMode=btn.dataset.write;
+    document.querySelectorAll('[data-write]').forEach(b=>b.classList.toggle('active',b===btn));
+    render();
+  });
+});
+document.getElementById('btn-detail').addEventListener('click',()=>{
+  STATE.showDetail=!STATE.showDetail;
+  document.getElementById('btn-detail').classList.toggle('active',STATE.showDetail);
+  render();
+});
+document.getElementById('btn-zoomin').addEventListener('click', ()=>svg.transition().duration(250).call(zoom.scaleBy,1.4));
+document.getElementById('btn-zoomout').addEventListener('click',()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.4));
+document.getElementById('btn-fit').addEventListener('click',fitView);
+
+function fitView(){
+  if(!STATE.nodes.length) return;
+  const nw=nodeW(),nh=nodeH();
+  const xs=STATE.nodes.map(n=>n._x||0),ys=STATE.nodes.map(n=>n._y||0);
+  const w=Math.max(...xs)-Math.min(...xs)+nw*2||1;
+  const h=Math.max(...ys)-Math.min(...ys)+nh*2||1;
+  const el=document.getElementById('svg-canvas');
+  const sc=Math.min(el.clientWidth/w,el.clientHeight/h)*0.85;
+  const cx=(Math.max(...xs)+Math.min(...xs))/2;
+  const cy=(Math.max(...ys)+Math.min(...ys))/2;
+  svg.transition().duration(400).call(zoom.transform,
+    d3.zoomIdentity.translate(el.clientWidth/2-sc*cx,el.clientHeight/2-sc*cy).scale(sc));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SAVE / LOAD
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-save').addEventListener('click',()=>{
+  const data={appVersion:APP_VERSION,savedAt:new Date().toISOString(),
+    langMode:STATE.langMode,writeMode:STATE.writeMode,showDetail:STATE.showDetail,
+    nextNodeId:STATE.nextNodeId,nextEdgeId:STATE.nextEdgeId,
+    nodes:STATE.nodes,edges:STATE.edges};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=Object.assign(document.createElement('a'),
+    {href:url,download:'familytree_'+new Date().toISOString().slice(0,10)+'_v2.9.ftajson'});
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+});
+
+document.getElementById('file-input').addEventListener('change',function(){
+  const file=this.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      Object.assign(STATE,{nodes:d.nodes||[],edges:d.edges||[],
+        nextNodeId:d.nextNodeId||(d.nextId||1),
+        nextEdgeId:d.nextEdgeId||1,
+        langMode:d.langMode||'en',
+        writeMode:d.writeMode||'h',showDetail:!!d.showDetail});
+      // 旧バージョン互換: nameJP/nameEN → firstJP/firstEN に変換
+      STATE.nodes.forEach(n=>{
+        if(!n.firstJP&&n.nameJP){ n.firstJP=n.nameJP; delete n.nameJP; }
+        if(!n.firstEN&&n.nameEN){ n.firstEN=n.nameEN; delete n.nameEN; }
+        n.lastJP=n.lastJP||''; n.middleJP=n.middleJP||''; n.maidenJP=n.maidenJP||'';
+        n.firstEN=n.firstEN||''; n.lastEN=n.lastEN||''; n.middleEN=n.middleEN||''; n.maidenEN=n.maidenEN||'';
+        if(!n.gender) n.gender='none';
+      });
+      document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===STATE.langMode));
+      document.querySelectorAll('[data-write]').forEach(b=>b.classList.toggle('active',b.dataset.write===STATE.writeMode));
+      document.getElementById('btn-detail').classList.toggle('active',STATE.showDetail);
+      render();setTimeout(fitView,80);
+    }catch(err){alert('読み込み失敗:\n'+err.message);}
+  };
+  reader.readAsText(file);this.value='';
+});
+
+// ══════════════════════════════════════════════════════════════
+//  PDF EXPORT
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-pdf').addEventListener('click',exportPDF);
+async function exportPDF(){
+  const overlay=document.getElementById('pdf-overlay');
+  const statusEl=document.getElementById('pdf-status');
+  overlay.classList.add('open');statusEl.textContent='SVGを準備中...';
+  await new Promise(r=>setTimeout(r,80));
+  try{
+    if(!STATE.nodes.length){overlay.classList.remove('open');return;}
+    const nw=nodeW(),nh=nodeH(),PAD=80;
+    const xs=STATE.nodes.map(n=>n._x||0),ys=STATE.nodes.map(n=>n._y||0);
+    const minX=Math.min(...xs)-nw/2-PAD,minY=Math.min(...ys)-nh/2-PAD;
+    const maxX=Math.max(...xs)+nw/2+PAD,maxY=Math.max(...ys)+nh/2+PAD;
+    const cW=maxX-minX,cH=maxY-minY;
+    const landscape=cW>cH;
+    const pdfW=landscape?1189:841,pdfH=landscape?841:1189;
+    const NS='http://www.w3.org/2000/svg';
+    const exp=document.createElementNS(NS,'svg');
+    exp.setAttribute('xmlns',NS);
+    exp.setAttribute('width',String(pdfW*3.7795));
+    exp.setAttribute('height',String(pdfH*3.7795));
+    exp.setAttribute('viewBox',`${minX} ${minY} ${cW} ${cH}`);
+    const bg=document.createElementNS(NS,'rect');
+    bg.setAttribute('x',String(minX));bg.setAttribute('y',String(minY));
+    bg.setAttribute('width',String(cW));bg.setAttribute('height',String(cH));
+    bg.setAttribute('fill','#ffffff');
+    exp.appendChild(bg);
+    exp.appendChild(document.getElementById('layer-edges').cloneNode(true));
+    exp.appendChild(document.getElementById('layer-nodes').cloneNode(true));
+    inlineStylesForPDF(exp);
+    statusEl.textContent='PDFを生成中...';
+    await new Promise(r=>setTimeout(r,40));
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:landscape?'landscape':'portrait',unit:'mm',format:'a0',compress:true});
+    await doc.svg(exp,{x:0,y:0,width:pdfW,height:pdfH});
+    statusEl.textContent='ダウンロード中...';
+    await new Promise(r=>setTimeout(r,40));
+    doc.save('familytree_'+new Date().toISOString().slice(0,10)+'_A0.pdf');
+  }catch(err){
+    console.error(err);alert('PDF生成に失敗しました。\n'+err.message);
+  }finally{overlay.classList.remove('open');}
+}
+function inlineStylesForPDF(root){
+  const MAP={
+    'e-marriage-line':{stroke:'#0a0a0a','stroke-width':'1.2',fill:'none','stroke-linejoin':'miter'},
+    'e-parentchild':  {stroke:'#0a0a0a','stroke-width':'1.2',fill:'none'},
+    'e-adopted':      {stroke:'#0a0a0a','stroke-width':'1.2',fill:'none','stroke-dasharray':'6 4'},
+    'e-symbol':       {fill:'#0a0a0a','font-size':'18','text-anchor':'middle','dominant-baseline':'central'},
+    'e-symbol-cross': {fill:'#0a0a0a','font-size':'22','text-anchor':'middle','dominant-baseline':'central'},
+    'node-text-name': {fill:'#0a0a0a','font-size':'12','text-anchor':'middle','dominant-baseline':'central','font-family':'sans-serif'},
+    'node-text-maiden':{fill:'#999999','font-size':'8','text-anchor':'middle','dominant-baseline':'central','font-family':'sans-serif'},
+    'node-text-sub':  {fill:'#999999','font-size':'9.5','text-anchor':'middle','dominant-baseline':'central','font-family':'sans-serif'},
+    'node-shape':     {fill:'#ffffff',stroke:'#0a0a0a','stroke-width':'1.2'},
+    'gen-guide':      {display:'none'},
+    'gen-label':      {display:'none'},
+  };
+  root.querySelectorAll('[class]').forEach(el=>{
+    (el.getAttribute('class')||'').split(/\s+/).forEach(cls=>{
+      const s=MAP[cls];if(s) Object.entries(s).forEach(([k,v])=>el.setAttribute(k,v));
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+render();
+setTimeout(()=>{
+  const el=document.getElementById('svg-canvas');
+  svg.call(zoom.transform,d3.zoomIdentity.translate(el.clientWidth/2,el.clientHeight/2).scale(1));
+},60);
+</script>
+</body>
+</html>
