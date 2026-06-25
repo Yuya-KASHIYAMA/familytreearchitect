@@ -11,4 +11,5 @@ FamilyTreeArchitect (Ver.4.6)
 ご意見・バグ報告は制作者まで。
 
 更新日: 2026年6月25日
+
 <img width="4080" height="2430" alt="example-familytree-sazaesan" src="https://github.com/user-attachments/assets/243709e9-9722-4acb-ac8e-30dabcc059fd" />
