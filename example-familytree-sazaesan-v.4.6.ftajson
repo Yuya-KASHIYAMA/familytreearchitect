@@ -1,0 +1,485 @@
+{
+  "appVersion": "4.6",
+  "createdVersion": "4.6",
+  "updatedVersion": "4.6",
+  "savedAt": "2026-06-25T08:42:44.448Z",
+  "langMode": "jp",
+  "writeMode": "h",
+  "disp": {
+    "lastName": "show",
+    "firstName": true,
+    "middleName": "hide",
+    "maidenName": true,
+    "birthDeath": false,
+    "location": false,
+    "customEdge": false,
+    "relationLabel": false,
+    "genGuide": false,
+    "guideCustomLabel": false
+  },
+  "nextNodeId": 18,
+  "nextEdgeId": 25,
+  "guideMin": -6,
+  "guideMax": 12,
+  "guideLabels": [],
+  "nodes": [
+    {
+      "id": "n0",
+      "firstJP": "サザエ",
+      "middleJP": "",
+      "lastJP": "フグ田",
+      "maidenJP": "",
+      "firstEN": "Sazae",
+      "middleEN": "",
+      "lastEN": "Fuguta",
+      "maidenEN": "",
+      "gender": "female",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 0,
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "n1",
+      "firstJP": "マスオ",
+      "middleJP": "",
+      "lastJP": "フグ田",
+      "maidenJP": "",
+      "firstEN": "Masuo",
+      "middleEN": "",
+      "lastEN": "Fuguta",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 0,
+      "position": {
+        "x": 200,
+        "y": 0
+      }
+    },
+    {
+      "id": "n2",
+      "firstJP": "タラオ",
+      "middleJP": "",
+      "lastJP": "フグ田",
+      "maidenJP": "",
+      "firstEN": "Tarao",
+      "middleEN": "",
+      "lastEN": "Fuguta",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": -2,
+      "position": {
+        "x": 100,
+        "y": 200
+      }
+    },
+    {
+      "id": "n4",
+      "firstJP": "フネ",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "石田",
+      "firstEN": "Fune",
+      "middleEN": "",
+      "lastEN": "Ishono",
+      "maidenEN": "Ishida",
+      "gender": "female",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 2,
+      "position": {
+        "x": 0,
+        "y": -200
+      }
+    },
+    {
+      "id": "n5",
+      "firstJP": "波平",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "",
+      "firstEN": "Namihei",
+      "middleEN": "",
+      "lastEN": "Isono",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 2,
+      "position": {
+        "x": 200,
+        "y": -200
+      }
+    },
+    {
+      "id": "n6",
+      "firstJP": "藻屑源素太皆",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "",
+      "firstEN": "Mokuzuminamotonosutamina",
+      "middleEN": "",
+      "lastEN": "Isono",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 4,
+      "position": {
+        "x": 0,
+        "y": -400
+      }
+    },
+    {
+      "id": "n7",
+      "firstJP": "海平",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "",
+      "firstEN": "Umihei",
+      "middleEN": "",
+      "lastEN": "Isono",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 3,
+      "position": {
+        "x": 400,
+        "y": -200
+      }
+    },
+    {
+      "id": "n8",
+      "firstJP": "なぎえ",
+      "middleJP": "",
+      "lastJP": "波野",
+      "maidenJP": "",
+      "firstEN": "Nagie",
+      "middleEN": "",
+      "lastEN": "Namino",
+      "maidenEN": "",
+      "gender": "female",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 3,
+      "position": {
+        "x": -400,
+        "y": -200
+      }
+    },
+    {
+      "id": "n9",
+      "firstJP": "",
+      "middleJP": "",
+      "lastJP": "",
+      "maidenJP": "",
+      "firstEN": "",
+      "middleEN": "",
+      "lastEN": "",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 3,
+      "position": {
+        "x": -200,
+        "y": -200
+      }
+    },
+    {
+      "id": "n10",
+      "firstJP": "ノリスケ",
+      "middleJP": "",
+      "lastJP": "波野",
+      "maidenJP": "",
+      "firstEN": "Norisuke",
+      "middleEN": "",
+      "lastEN": "Namino",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 1,
+      "position": {
+        "x": -300,
+        "y": 0
+      }
+    },
+    {
+      "id": "n11",
+      "firstJP": "タイ子",
+      "middleJP": "",
+      "lastJP": "波野",
+      "maidenJP": "入江",
+      "firstEN": "Taiko",
+      "middleEN": "",
+      "lastEN": "Namino",
+      "maidenEN": "Irie",
+      "gender": "female",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 0,
+      "position": {
+        "x": -500,
+        "y": 0
+      }
+    },
+    {
+      "id": "n12",
+      "firstJP": "イクラ",
+      "middleJP": "",
+      "lastJP": "波野",
+      "maidenJP": "",
+      "firstEN": "Ikura",
+      "middleEN": "",
+      "lastEN": "Namino",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": -2,
+      "position": {
+        "x": -400,
+        "y": 200
+      }
+    },
+    {
+      "id": "n13",
+      "firstJP": "ワカメ",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "",
+      "firstEN": "Wakame",
+      "middleEN": "",
+      "lastEN": "Isono",
+      "maidenEN": "",
+      "gender": "female",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": 0,
+      "position": {
+        "x": 400,
+        "y": 0
+      }
+    },
+    {
+      "id": "n14",
+      "firstJP": "カツオ",
+      "middleJP": "",
+      "lastJP": "磯野",
+      "maidenJP": "",
+      "firstEN": "Katsuo",
+      "middleEN": "",
+      "lastEN": "Isono",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "",
+      "memo": "",
+      "generation": 0,
+      "position": {
+        "x": 600,
+        "y": 0
+      }
+    },
+    {
+      "id": "n15",
+      "firstJP": "タマ",
+      "middleJP": "",
+      "lastJP": "",
+      "maidenJP": "",
+      "firstEN": "Tama",
+      "middleEN": "",
+      "lastEN": "",
+      "maidenEN": "",
+      "gender": "male",
+      "birth": "",
+      "death": "",
+      "location": "Japan",
+      "memo": "",
+      "generation": -2,
+      "position": {
+        "x": 300,
+        "y": 100
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n0",
+      "target": "n1",
+      "type": "marriage",
+      "subtype": "normal"
+    },
+    {
+      "id": "e2",
+      "source": "n1",
+      "target": "n2",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e3",
+      "source": "n0",
+      "target": "n2",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e5",
+      "source": "n4",
+      "target": "n0",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e6",
+      "source": "n4",
+      "target": "n5",
+      "type": "marriage",
+      "subtype": "normal"
+    },
+    {
+      "id": "e7",
+      "source": "n5",
+      "target": "n0",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e8",
+      "source": "n6",
+      "target": "n5",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e9",
+      "source": "n6",
+      "target": "n7",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e10",
+      "source": "n6",
+      "target": "n8",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e11",
+      "source": "n8",
+      "target": "n9",
+      "type": "marriage",
+      "subtype": "normal"
+    },
+    {
+      "id": "e12",
+      "source": "n8",
+      "target": "n10",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e13",
+      "source": "n9",
+      "target": "n10",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e14",
+      "source": "n10",
+      "target": "n11",
+      "type": "marriage",
+      "subtype": "normal"
+    },
+    {
+      "id": "e15",
+      "source": "n11",
+      "target": "n12",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e16",
+      "source": "n10",
+      "target": "n12",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e17",
+      "source": "n4",
+      "target": "n13",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e18",
+      "source": "n5",
+      "target": "n13",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e19",
+      "source": "n4",
+      "target": "n14",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e20",
+      "source": "n5",
+      "target": "n14",
+      "type": "parent-child",
+      "subtype": "biological"
+    },
+    {
+      "id": "e21",
+      "source": "n13",
+      "target": "n15",
+      "type": "parent-child",
+      "subtype": "biological",
+      "hidden": true
+    }
+  ]
+}
