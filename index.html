@@ -2769,14 +2769,12 @@ async function saveToDrive(filename,jsonStr){
 function loadFromDrive(callback){
   _getDriveToken().then(token=>{
     if(!_gapiPickerLoaded){alert(t('drive-not-ready'));return;}
-    const myView=new google.picker.DocsView()
-      .setIncludeFolders(false).setMimeTypes('application/json').setOwnedByMe(true);
-    const sharedView=new google.picker.DocsView()
-      .setIncludeFolders(false).setMimeTypes('application/json').setOwnedByMe(false);
+    const allView=new google.picker.DocsView()
+      .setIncludeFolders(true).setMimeTypes('application/json');
     const picker=new google.picker.PickerBuilder()
       .setTitle('FamilyTreeArchitect ファイルを選択')
-      .addView(myView)
-      .addView(sharedView)
+      .addView(allView)
+      .enableFeature(google.picker.Feature.NAV_HIDDEN,false)
       .setOAuthToken(token)
       .setDeveloperKey(GDRIVE_API_KEY)
       .setCallback(async(data)=>{
