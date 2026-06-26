@@ -2800,7 +2800,7 @@ function loadFromDrive(callback){
   _getDriveToken().then(token=>{
     if(!_gapiPickerLoaded){alert(t('drive-not-ready'));return;}
     const allView=new google.picker.DocsView()
-      .setIncludeFolders(true).setMimeTypes('application/json');
+      .setIncludeFolders(true);
     const picker=new google.picker.PickerBuilder()
       .setTitle('FamilyTreeArchitect ファイルを選択')
       .addView(allView)
