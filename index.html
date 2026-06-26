@@ -1994,6 +1994,7 @@ document.getElementById('pop-add-mother').addEventListener('click',()=>{ if(!_po
 document.getElementById('pop-add-spouse').addEventListener('click',()=>{
   if(!_popupNode)return; const ref=_popupNode; hidePopup();
   computeLayout();
+  if(!ref.position) ref.position={x:ref._x??0,y:ref._y??0};
   const sg=ref.gender==='male'?'female':ref.gender==='female'?'male':'none';
   const rp=currentPos(ref);
   const refEG=effectiveGen(ref);
@@ -2152,10 +2153,25 @@ function startAddParent(refNode,gender){
 document.getElementById('parent-modal-yes').addEventListener('click',()=>{
   document.getElementById('parent-modal-overlay').style.display='none';
   if(!_pp.ref||!_pp.node){render();return;}
+  computeLayout(); // _x/_y を確定させる
   const og=_pp.gender==='male'?'female':'male';
   const sameGen=_pp.node.generation;
-  const otherX=nonOverlapX(currentPos(_pp.node).x+NODE_GAP,effectiveGen(_pp.node));
-  const other=createNode(sameGen,og,otherX,_pp.node._y);
+  const parentY=_pp.node._y??(-effectiveGen(_pp.node)*GEN_GAP);
+  const childX=currentPos(_pp.ref).x;
+  const leftX=childX-NODE_GAP/2;
+  const rightX=childX+NODE_GAP/2;
+  // 左側に既存ノードがいない場合のみ対称配置
+  const _sibNodes=STATE.nodes.filter(n=>n!==_pp.node&&effectiveGen(n)===sameGen);
+  const _leftBlocked=_sibNodes.some(n=>Math.abs((n._x??n.position?.x??0)-leftX)<NODE_GAP*0.6);
+  let otherX;
+  if(!_leftBlocked){
+    _pp.node.position={x:leftX,y:parentY};
+    _pp.node._x=leftX;
+    otherX=rightX;
+  } else {
+    otherX=nonOverlapX((_pp.node._x??0)+NODE_GAP,sameGen);
+  }
+  const other=createNode(sameGen,og,otherX,parentY);
   STATE.edges.push({id:eid(),source:_pp.node.id,target:other.id,type:'marriage',subtype:'normal'});
   STATE.edges.push({id:eid(),source:other.id,target:_pp.ref.id,type:'parent-child',subtype:'biological'});
   const _refName=_pp.ref?displayName(_pp.ref):'';
@@ -2358,10 +2374,8 @@ document.getElementById('f-gender-label').addEventListener('keydown',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(!document.getElementById('modal-overlay').classList.contains('open')) return;
-  const tag=document.activeElement?.tagName;
-  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
-  if(e.key==='ArrowLeft'){e.preventDefault();setModalPage(1);}
-  if(e.key==='ArrowRight'){e.preventDefault();setModalPage(2);}
+  if(e.key==='ArrowLeft'){e.preventDefault();setModalPage(1);return;}
+  if(e.key==='ArrowRight'){e.preventDefault();setModalPage(2);return;}
 });
 document.getElementById('modal-cancel').addEventListener('click',()=>{
   document.getElementById('modal-overlay').classList.remove('open');
@@ -3023,6 +3037,7 @@ document.getElementById('btn-png').addEventListener('click',async()=>{
   }
   openSaveAs(defaultName,fname=>exportPNG(fname,null));
 });
+
 async function exportPNG(fname,fileHandle){
   const overlay=document.getElementById('pdf-overlay');
   const statusEl=document.getElementById('pdf-status');
