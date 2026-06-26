@@ -304,31 +304,20 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
 #storage-choice-overlay.open{display:flex}
 #storage-choice-box{
   background:var(--bg);border:1px solid var(--border);
-  border-radius:8px;padding:20px 22px;
-  width:260px;max-width:calc(100vw - 40px);
+  border-radius:8px;padding:24px 28px;
+  width:280px;max-width:calc(100vw - 40px);
   box-shadow:0 8px 40px rgba(0,0,0,.12);
 }
-#storage-choice-box h2{
-  font-size:12px;font-weight:500;margin:0 0 12px;
-  font-family:var(--mono);color:var(--fg2);letter-spacing:.03em;
-}
+#storage-choice-box h2{font-size:15px;font-weight:500;margin:0 0 16px;font-family:var(--mono)}
 .storage-choice-btn{
-  display:flex;align-items:center;gap:10px;
-  width:100%;padding:10px 12px;margin-bottom:8px;
-  border:1px solid var(--border);border-radius:6px;
+  display:flex;align-items:center;
+  width:100%;padding:9px 12px;margin-bottom:8px;
+  border:1px solid var(--border);border-radius:4px;
   background:var(--bg);color:var(--fg);
   font-size:13px;font-family:var(--sans);
   cursor:pointer;transition:background .15s;text-align:left;
 }
-.storage-choice-btn:hover{background:var(--hover-bg2);}
-.storage-choice-btn:last-of-type{margin-bottom:0;}
-#storage-choice-cancel{
-  display:block;width:100%;margin-top:10px;padding:6px;
-  border:none;background:transparent;color:var(--fg3);
-  font-size:12px;font-family:var(--sans);cursor:pointer;
-  transition:color .15s;
-}
-#storage-choice-cancel:hover{color:var(--fg);}
+.storage-choice-btn:hover{background:var(--border);}
 /* ── Toast ───────────────────────────────────────────────────── */
 .toast-msg{
   position:fixed;bottom:44px;left:50%;
@@ -453,7 +442,8 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
   <span id="status-nodes">0 人</span>
   <span id="status-gens">0 世代</span>
   <span id="status-zoom">100%</span>
-  <span id="status-ver" style="margin-left:auto;color:var(--fg3);overflow:hidden;text-overflow:ellipsis;min-width:0;">FamilyTreeArchitect v.4.5</span>
+  <span id="status-drive" style="display:none;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;color:var(--fg2);"></span>
+  <span id="status-ver" style="margin-left:auto;color:var(--fg3);overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:0;">FamilyTreeArchitect v.4.5</span>
 </div>
 
 <!-- ── Memo Tooltip ─────────────────────────────────────────── -->
@@ -490,7 +480,9 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
     <button class="storage-choice-btn" id="choice-drive">
       <span id="choice-drive-label"></span>
     </button>
-    <button id="storage-choice-cancel" data-i18n="btn-cancel">キャンセル</button>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button id="storage-choice-cancel" data-i18n="btn-cancel">キャンセル</button>
+    </div>
   </div>
 </div>
 
@@ -784,6 +776,8 @@ const T={
     'choice-device-save':'デバイスに保存','choice-device-load':'デバイスから読み込み',
     'choice-drive-save':'Google Driveに保存','choice-drive-load':'Google Driveから読み込み',
     'drive-save-ok':'Google Driveに保存しました','drive-load-fail':'Drive読み込みエラー: ',
+    'drive-overwrite-ok':'Google Driveに上書き保存しました',
+    'drive-folder-select':'保存先フォルダを選択',
     'drive-not-ready':'Google サービスの準備中です。少し待ってから再試行してください。',
     // edge modal
     'edge-modal-hd':'関係線を編集','edge-empty':'関係線はまだありません',
@@ -899,6 +893,8 @@ const T={
     'choice-device-save':'Save to device','choice-device-load':'Load from device',
     'choice-drive-save':'Save to Google Drive','choice-drive-load':'Load from Google Drive',
     'drive-save-ok':'Saved to Google Drive','drive-load-fail':'Drive load error: ',
+    'drive-overwrite-ok':'Overwritten on Google Drive',
+    'drive-folder-select':'Select a folder to save in',
     'drive-not-ready':'Google services not ready yet. Please try again in a moment.',
     'edge-modal-hd':'Edit Relations','edge-empty':'No relations yet',
     'edge-close':'Close','edge-save':'Save','edge-cancel':'Cancel',
@@ -2719,6 +2715,7 @@ document.getElementById('saveas-name').addEventListener('keydown',function(e){
 // ══════════════════════════════════════════════════════════════
 let _gsiLoaded=false,_gapiPickerLoaded=false;
 let _tokenClient=null,_driveToken=null,_driveTokenExpiry=0;
+let _driveFileId=null; // Driveから読み込んだ場合のファイルID（上書き保存用）
 
 if(IS_VERCEL){
   const s1=document.createElement('script');
@@ -2752,11 +2749,12 @@ function _getDriveToken(){
   });
 }
 
-async function saveToDrive(filename,jsonStr){
+async function saveToDrive(filename,jsonStr,folderId){
   const token=await _getDriveToken();
-  const meta=JSON.stringify({name:filename,mimeType:'application/json'});
+  const metaObj={name:filename,mimeType:'application/json'};
+  if(folderId) metaObj.parents=[folderId];
   const form=new FormData();
-  form.append('metadata',new Blob([meta],{type:'application/json'}));
+  form.append('metadata',new Blob([JSON.stringify(metaObj)],{type:'application/json'}));
   form.append('file',new Blob([jsonStr],{type:'application/json'}));
   const res=await fetch(
     'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
@@ -2764,6 +2762,38 @@ async function saveToDrive(filename,jsonStr){
   );
   if(!res.ok) throw new Error(res.status+' '+res.statusText);
   return res.json();
+}
+
+async function updateDriveFile(fileId,jsonStr){
+  const token=await _getDriveToken();
+  const res=await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=media',
+    {method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:jsonStr}
+  );
+  if(!res.ok) throw new Error(res.status+' '+res.statusText);
+  return res.json();
+}
+
+function openDriveFolderPicker(title,callback){
+  _getDriveToken().then(token=>{
+    if(!_gapiPickerLoaded){alert(t('drive-not-ready'));return;}
+    const view=new google.picker.DocsView()
+      .setIncludeFolders(true).setSelectFolderEnabled(true)
+      .setMimeTypes('application/vnd.google-apps.folder');
+    const picker=new google.picker.PickerBuilder()
+      .setTitle(title)
+      .addView(view)
+      .setOAuthToken(token)
+      .setDeveloperKey(GDRIVE_API_KEY)
+      .setCallback(data=>{
+        if(data.action===google.picker.Action.PICKED){
+          const item=data.docs[0];
+          if(item.mimeType==='application/vnd.google-apps.folder') callback(item.id);
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  }).catch(err=>{alert(err.message);});
 }
 
 function loadFromDrive(callback){
@@ -2785,12 +2815,33 @@ function loadFromDrive(callback){
             {headers:{Authorization:'Bearer '+token}}
           );
           if(!res.ok){alert(t('drive-load-fail')+res.status);return;}
+          _driveFileId=file.id;
           callback(await res.text());
+          // フォルダ名を取得してステータスバーに表示
+          _updateDriveStatus('☁ '+file.name);
+          fetch('https://www.googleapis.com/drive/v3/files/'+file.id+'?fields=parents',
+            {headers:{Authorization:'Bearer '+token}})
+          .then(r=>r.json()).then(meta=>{
+            const parentId=meta.parents?.[0];
+            if(!parentId) return;
+            return fetch('https://www.googleapis.com/drive/v3/files/'+parentId+'?fields=name',
+              {headers:{Authorization:'Bearer '+token}})
+            .then(r=>r.json()).then(folder=>{
+              if(folder.name) _updateDriveStatus('☁ '+folder.name+' / '+file.name);
+            });
+          }).catch(()=>{});
         }
       })
       .build();
     picker.setVisible(true);
   }).catch(err=>{alert(err.message);});
+}
+
+function _updateDriveStatus(text){
+  const el=document.getElementById('status-drive');
+  if(!el) return;
+  if(text){ el.textContent=text; el.style.display=''; }
+  else { el.textContent=''; el.style.display='none'; }
 }
 
 function showToast(msg){
@@ -2867,8 +2918,19 @@ document.getElementById('btn-save').addEventListener('click',async()=>{
   if(IS_VERCEL){
     openStorageChoice('save', doDeviceSave, async()=>{
       try{
-        await saveToDrive(defaultName,JSON.stringify(buildData(),null,2));
-        showToast(t('drive-save-ok'));
+        const jsonStr=JSON.stringify(buildData(),null,2);
+        if(_driveFileId){
+          await updateDriveFile(_driveFileId,jsonStr);
+          showToast(t('drive-overwrite-ok'));
+        }else{
+          openDriveFolderPicker(t('drive-folder-select'),async(folderId)=>{
+            try{
+              const result=await saveToDrive(defaultName,jsonStr,folderId);
+              _driveFileId=result.id;
+              showToast(t('drive-save-ok'));
+            }catch(e){alert('Google Drive: '+e.message);}
+          });
+        }
       }catch(e){alert('Google Drive: '+e.message);}
     });
   }else{
@@ -2932,6 +2994,7 @@ if(IS_VERCEL){
         inp.type='file'; inp.accept='.ftajson,.json'; inp.style.display='none';
         inp.addEventListener('change',function(){
           const file=this.files[0]; if(!file) return;
+          _driveFileId=null; _updateDriveStatus(null);
           const reader=new FileReader();
           reader.onload=e=>_applyLoadedData(e.target.result);
           reader.readAsText(file); inp.remove();
