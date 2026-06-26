@@ -2724,7 +2724,7 @@ if(IS_VERCEL){
     _gsiLoaded=true;
     _tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:GDRIVE_CLIENT_ID,
-      scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+      scope:'https://www.googleapis.com/auth/drive',
       callback:''
     });
   };
