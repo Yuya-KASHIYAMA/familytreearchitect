@@ -86,6 +86,7 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
 
 .tb-spacer{flex:1}
 #btn-save,#btn-load,#btn-png{width:112px;justify-content:center;}
+#btn-detail{width:140px;justify-content:center;}
 
 /* ── Canvas ─────────────────────────────────────────────────── */
 #canvas-wrap{position:fixed;top:44px;left:0;right:0;bottom:26px;overflow:hidden;opacity:0;transition:opacity .31s}
@@ -127,6 +128,10 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
   pointer-events:none;
 }
 .node-text-sub{
+  fill:var(--fg3);font-size:8px;dominant-baseline:central;text-anchor:middle;
+  pointer-events:none;
+}
+.node-text-age{
   fill:var(--fg3);font-size:8px;dominant-baseline:central;text-anchor:middle;
   pointer-events:none;
 }
@@ -266,6 +271,76 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ── Save As Dialog ──────────────────────────────────────────── */
+#saveas-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(10,10,10,.35);
+  display:none;align-items:center;justify-content:center;
+}
+#saveas-overlay.open{display:flex}
+#saveas-box{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:24px 28px;
+  width:400px;max-width:calc(100vw - 40px);
+  box-shadow:0 8px 40px rgba(0,0,0,.12);
+}
+#saveas-box h2{font-size:15px;font-weight:500;margin:0 0 16px;font-family:var(--mono)}
+#saveas-name{
+  width:100%;box-sizing:border-box;
+  border:1px solid var(--border);border-radius:4px;
+  padding:7px 10px;font-size:13px;font-family:var(--sans);
+  background:var(--bg);color:var(--fg);outline:none;
+  transition:border-color .15s;
+}
+#saveas-name:focus{border-color:var(--fg)}
+#saveas-note{font-size:11px;color:var(--fg3);margin:6px 0 0;}
+
+/* ── Storage Choice Dialog ───────────────────────────────────── */
+#storage-choice-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(10,10,10,.35);
+  display:none;align-items:center;justify-content:center;
+}
+#storage-choice-overlay.open{display:flex}
+#storage-choice-box{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:20px 22px;
+  width:260px;max-width:calc(100vw - 40px);
+  box-shadow:0 8px 40px rgba(0,0,0,.12);
+}
+#storage-choice-box h2{
+  font-size:12px;font-weight:500;margin:0 0 12px;
+  font-family:var(--mono);color:var(--fg2);letter-spacing:.03em;
+}
+.storage-choice-btn{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:10px 12px;margin-bottom:8px;
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--bg);color:var(--fg);
+  font-size:13px;font-family:var(--sans);
+  cursor:pointer;transition:background .15s;text-align:left;
+}
+.storage-choice-btn:hover{background:var(--hover-bg2);}
+.storage-choice-btn:last-of-type{margin-bottom:0;}
+#storage-choice-cancel{
+  display:block;width:100%;margin-top:10px;padding:6px;
+  border:none;background:transparent;color:var(--fg3);
+  font-size:12px;font-family:var(--sans);cursor:pointer;
+  transition:color .15s;
+}
+#storage-choice-cancel:hover{color:var(--fg);}
+/* ── Toast ───────────────────────────────────────────────────── */
+.toast-msg{
+  position:fixed;bottom:44px;left:50%;
+  transform:translateX(-50%) translateY(8px);
+  background:var(--fg);color:var(--bg);
+  padding:7px 16px;border-radius:20px;
+  font-size:12px;font-family:var(--sans);
+  opacity:0;transition:opacity .2s,transform .2s;
+  z-index:600;pointer-events:none;white-space:nowrap;
+}
+.toast-msg.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
 
 /* ── Onboarding ─────────────────────────────────────────────── */
 .onboard-ring{fill:none;stroke:var(--fg);stroke-width:2;pointer-events:none;}
@@ -404,6 +479,35 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
   </div>
 </div>
 
+
+<!-- ── Storage Choice Dialog ─────────────────────────────────── -->
+<div id="storage-choice-overlay">
+  <div id="storage-choice-box">
+    <h2 id="storage-choice-title"></h2>
+    <button class="storage-choice-btn" id="choice-device">
+      <span style="font-size:15px">💾</span>
+      <span id="choice-device-label"></span>
+    </button>
+    <button class="storage-choice-btn" id="choice-drive">
+      <span style="font-size:15px">☁</span>
+      <span id="choice-drive-label"></span>
+    </button>
+    <button id="storage-choice-cancel" data-i18n="btn-cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- ── Save As Dialog ────────────────────────────────────────── -->
+<div id="saveas-overlay">
+  <div id="saveas-box">
+    <h2 id="saveas-title" data-i18n="saveas-title">名前を付けて保存</h2>
+    <input type="text" id="saveas-name" autocomplete="off" spellcheck="false">
+    <p id="saveas-note" data-i18n="saveas-note">※ 保存先フォルダはブラウザのダウンロード設定に従います</p>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button id="saveas-cancel" data-i18n="btn-cancel">キャンセル</button>
+      <button id="saveas-ok" class="primary" data-i18n="saveas-ok">保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Popup Menu ────────────────────────────────────────────── -->
 <div id="popup">
@@ -572,9 +676,15 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
       <div class="form-row"><label data-i18n="lbl-birth">生年 / Birth</label><input type="text" id="f-birth" placeholder="1950" autocomplete="off"></div>
       <div class="form-row"><label data-i18n="lbl-death">没年 / Death</label><input type="text" id="f-death" placeholder="2020" autocomplete="off"></div>
     </div>
-    <div class="form-row">
-      <label data-i18n="lbl-memo">メモ（ホバーで表示）</label>
-      <input type="text" id="f-memo" placeholder="居住の変遷、長男、など" data-i18n-ph="ph-memo" autocomplete="off">
+    <div class="form-grid2">
+      <div class="form-row">
+        <label data-i18n="lbl-age">歳</label>
+        <input type="text" id="f-age" placeholder="74" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label data-i18n="lbl-memo">メモ（ホバーで表示）</label>
+        <input type="text" id="f-memo" placeholder="居住の変遷、長男、など" data-i18n-ph="ph-memo" autocomplete="off">
+      </div>
     </div>
     <p data-i18n="sec-position" style="font-size:10px;color:var(--fg3);letter-spacing:.06em;margin:10px 0 8px;text-transform:uppercase">座標</p>
     <div class="form-grid2">
@@ -665,10 +775,18 @@ const T={
     'lbl-lastEN':'姓 (EN)','lbl-maidenEN':'旧姓 (EN)',
     'lbl-gender':'性別','lbl-location':'場所',
     'lbl-birth':'生年 / Birth','lbl-death':'没年 / Death',
+    'lbl-age':'歳','disp-age':'歳',
     'lbl-memo':'メモ（ホバーで表示）','edge-label-ph':'ラベル',
     'ph-memo':'居住の変遷、長男、など',
     'opt-none':'選択しない','opt-male':'男性','opt-female':'女性',
     'btn-cancel':'キャンセル','btn-save':'保存',
+    'saveas-title':'名前を付けて保存','saveas-ok':'保存',
+    'saveas-note':'※ 保存先フォルダはブラウザのダウンロード設定に従います',
+    'storage-save-title':'保存先を選択','storage-load-title':'読み込み元を選択',
+    'choice-device-save':'デバイスに保存','choice-device-load':'デバイスから読み込み',
+    'choice-drive-save':'Google Driveに保存','choice-drive-load':'Google Driveから読み込み',
+    'drive-save-ok':'Google Driveに保存しました','drive-load-fail':'Drive読み込みエラー: ',
+    'drive-not-ready':'Google サービスの準備中です。少し待ってから再試行してください。',
     // edge modal
     'edge-modal-hd':'関係線を編集','edge-empty':'関係線はまだありません',
     'edge-close':'閉じる','edge-save':'保存','edge-cancel':'キャンセル',
@@ -772,10 +890,18 @@ const T={
     'lbl-lastEN':'Family Name (EN)','lbl-maidenEN':'Maiden Name (EN)',
     'lbl-gender':'Gender','lbl-location':'Location',
     'lbl-birth':'Birth','lbl-death':'Death',
+    'lbl-age':'Age','disp-age':'Age',
     'lbl-memo':'Memo (visible on hover)','edge-label-ph':'Label',
     'ph-memo':'Residential History, First Born, etc.',
     'opt-none':'Unspecified','opt-male':'Male','opt-female':'Female',
     'btn-cancel':'Cancel','btn-save':'Save',
+    'saveas-title':'Save As','saveas-ok':'Save',
+    'saveas-note':'※ The download folder follows your browser settings.',
+    'storage-save-title':'Save to...','storage-load-title':'Load from...',
+    'choice-device-save':'Save to device','choice-device-load':'Load from device',
+    'choice-drive-save':'Save to Google Drive','choice-drive-load':'Load from Google Drive',
+    'drive-save-ok':'Saved to Google Drive','drive-load-fail':'Drive load error: ',
+    'drive-not-ready':'Google services not ready yet. Please try again in a moment.',
     'edge-modal-hd':'Edit Relations','edge-empty':'No relations yet',
     'edge-close':'Close','edge-save':'Save','edge-cancel':'Cancel',
     'edge-marriage':'Marriage','edge-parentchild':'Parent-Child',
@@ -895,7 +1021,10 @@ function setQ(sel,valOrAttr,val){
 // ══════════════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════════════
-const APP_VERSION='4.6';
+const APP_VERSION='5.0';
+const IS_VERCEL=window.location.origin==='https://familytreearchitect.vercel.app';
+const GDRIVE_CLIENT_ID='490296676717-a78kbrussum4i87k4gmi1mv3ai158d5m.apps.googleusercontent.com';
+const GDRIVE_API_KEY='AIzaSyDZCgtFLojEnlwsOthQhLQ3Rwbvgmf7sL4';
 const STATE={nodes:[],edges:[],langMode:'mx',writeMode:'h',
   nextNodeId:1, nextEdgeId:1,
   guideMin:-6, guideMax:6,
@@ -903,7 +1032,7 @@ const STATE={nodes:[],edges:[],langMode:'mx',writeMode:'h',
   createdVersion:APP_VERSION, updatedVersion:APP_VERSION,
   disp:{
     lastName:'show', firstName:true, middleName:'hide',
-    maidenName:false, birthDeath:false, location:false,
+    maidenName:false, birthDeath:false, location:false, age:false,
     customEdge:true, relationLabel:true, genGuide:true, guideCustomLabel:true,
   },
 };
@@ -1018,13 +1147,29 @@ function buildNameEN(n){
   if(!parts.length) return '—';
   return parts.join(' ');
 }
+function buildNameJP_western(n){
+  const d=STATE.disp;
+  const parts=[];
+  const mid =applyNameModeJP(d.middleName,n.middleJP,n.middleEN);
+  const last=applyNameModeJP(d.lastName,n.lastJP,n.lastEN);
+  if(d.firstName){ const fn=n.firstJP||n.firstEN; if(fn) parts.push(fn); }
+  if(mid)  parts.push(mid);
+  if(last) parts.push(last);
+  if(!parts.length) return buildNameEN(n)||'—';
+  return parts.join(' ');
+}
 function buildNameJP_raw(n){
   return [n.lastJP,n.middleJP,n.firstJP].filter(Boolean).join(' ');
 }
 function displayName(n){
   if(!n) return '—';
   const hasJP=!!(n.lastJP||n.firstJP||n.middleJP);
-  if(STATE.langMode==='jp') return hasJP?buildNameJP(n):buildNameEN(n);
+  if(STATE.langMode==='jp'){
+    if(!hasJP) return buildNameEN(n);
+    const loc=(n.location||'').toLowerCase();
+    const isJapan=loc.includes('日本')||loc.includes('japan');
+    return isJapan?buildNameJP(n):buildNameJP_western(n);
+  }
   if(STATE.langMode==='en') return buildNameEN(n);
   const loc=(n.location||'').toLowerCase();
   const isJapan=loc.includes('日本')||loc.includes('japan');
@@ -1042,6 +1187,13 @@ function displayMaiden(n){
 function formatMaidenLabel(maiden){
   if(!maiden) return '';
   return STATE.langMode==='jp' ? `旧姓 ${maiden}` : `née ${maiden}`;
+}
+function displayAge(n){
+  if(!STATE.disp.age) return '';
+  if(n.birth&&/^\d{4}$/.test(n.birth)&&!n.death){
+    return String(new Date().getFullYear()-parseInt(n.birth));
+  }
+  return n.age||'';
 }
 function displaySub(n){
   const parts=[];
@@ -1412,6 +1564,7 @@ function render(){
     });
 
   nodeEnter.append('path').attr('class','node-shape');
+  nodeEnter.append('text').attr('class','node-text-age');
   nodeEnter.append('text').attr('class','node-text-maiden');
   nodeEnter.append('text').attr('class','node-text-order');
   nodeEnter.append('text').attr('class','node-text-name');
@@ -1431,6 +1584,8 @@ function render(){
 
     const sub=displaySub(d);
     const maiden=displayMaiden(d);
+    const age=displayAge(d);
+    const ageEl   =d3.select(this).select('.node-text-age');
     const maidenEl=d3.select(this).select('.node-text-maiden');
     const orderEl =d3.select(this).select('.node-text-order');
     const nameEl  =d3.select(this).select('.node-text-name');
@@ -1440,8 +1595,8 @@ function render(){
     if(isVertical()){
       const name=displayName(d);
       removeFO(d3.select(this));
-      renderVerticalJP(d3.select(this),name,formatMaidenLabel(maiden),sub,nw,nh,d.colorIdx,_nameColor);
-      maidenEl.text(''); nameEl.text(''); subEl.text('');
+      renderVerticalJP(d3.select(this),name,formatMaidenLabel(maiden),sub,age,nw,nh,d.colorIdx,_nameColor);
+      ageEl.text(''); maidenEl.text(''); nameEl.text(''); subEl.text('');
     } else {
       removeFO(d3.select(this));
       const nameText=displayName(d);
@@ -1449,21 +1604,36 @@ function render(){
       const nameLineCount=nameLines.length;
       const ROW_H=12;
       const nameStartY=-(nameLineCount*ROW_H-ROW_H)/2;
+      const _subFill=_subTextColor(d.colorIdx)||'var(--fg3)';
 
       nameEl.attr('transform',null).attr('x',0).style('font-size','12px').style('fill',_nameColor).text(null);
       nameLines.forEach((line,i)=>{
         nameEl.append('tspan').attr('x',0).attr('y',nameStartY+i*ROW_H).text(line);
       });
 
-      if(!!maiden){
-        maidenEl.attr('transform',null).attr('x',0).attr('y',nameStartY-10-(nameLineCount>1?1:2))
-          .text(formatMaidenLabel(maiden)).style('font-size','8px').style('fill',_subTextColor(d.colorIdx)||'var(--fg3)');
-      } else { maidenEl.text('').style('fill',null); }
+      const maidenBaseY=nameStartY-10-(nameLineCount>1?1:2);
+      const ageStr=age?`(${age})`:'';
+      if(!!maiden&&!!age){
+        maidenEl.attr('transform',null).attr('x',0).attr('y',maidenBaseY)
+          .text(ageStr+' '+formatMaidenLabel(maiden)).style('font-size','8px').style('fill',_subFill);
+        ageEl.text('').style('fill',null);
+      } else if(!!maiden){
+        maidenEl.attr('transform',null).attr('x',0).attr('y',maidenBaseY)
+          .text(formatMaidenLabel(maiden)).style('font-size','8px').style('fill',_subFill);
+        ageEl.text('').style('fill',null);
+      } else if(!!age){
+        ageEl.attr('transform',null).attr('x',0).attr('y',maidenBaseY)
+          .text(ageStr).style('font-size','8px').style('fill',_subFill);
+        maidenEl.text('').style('fill',null);
+      } else {
+        maidenEl.text('').style('fill',null);
+        ageEl.text('').style('fill',null);
+      }
 
       const nameEndY=nameStartY+(nameLineCount-1)*ROW_H;
       if(!!sub){
         subEl.attr('transform',null).attr('x',0).attr('y',nameEndY+ROW_H)
-          .text(sub).style('font-size','8px').style('fill',_subTextColor(d.colorIdx)||'var(--fg3)');
+          .text(sub).style('font-size','8px').style('fill',_subFill);
       } else { subEl.text('').style('fill',null); }
     }
   });
@@ -1474,7 +1644,7 @@ function render(){
   document.getElementById('end-message').style.display=STATE.nodes.length?'none':'flex';
 }
 
-function renderVerticalJP(gSel,name,maiden,sub,nw,nh,nodeColor,nameColor){
+function renderVerticalJP(gSel,name,maiden,sub,age,nw,nh,nodeColor,nameColor){
   removeFO(gSel);
   const fo=gSel.append('foreignObject').attr('x',-nw/2).attr('y',-nh/2).attr('width',nw).attr('height',nh).attr('pointer-events','none');
   const outer=fo.append('xhtml:div')
@@ -1522,7 +1692,9 @@ function renderVerticalJP(gSel,name,maiden,sub,nw,nh,nodeColor,nameColor){
   const subColor=_subTextColor(nodeColor!==undefined?nodeColor:undefined)||'var(--fg3)';
   if(!!sub)    addSubCol(sub,   '8px',subColor);
   addNameCol();
-  if(!!maiden) addSubCol(maiden,'8px',subColor);
+  if(!!maiden&&!!age) addSubCol('('+age+') '+maiden,'8px',subColor);
+  else if(!!maiden)   addSubCol(maiden,'8px',subColor);
+  else if(!!age)      addSubCol('('+age+')','8px',subColor);
 }
 function removeFO(gSel){ gSel.selectAll('foreignObject').remove(); }
 
@@ -1850,7 +2022,7 @@ function createNode(generation,gender,posX,posY){
   const pos=(posX!==undefined)?{x:posX,y:posY??(-generation*GEN_GAP)}:null;
   const n={id,firstJP:'',middleJP:'',lastJP:'',maidenJP:'',
     firstEN:'',middleEN:'',lastEN:'',maidenEN:'',
-    gender:gender||'none',birth:'',death:'',location:'',memo:'',generation,position:pos};
+    gender:gender||'none',birth:'',death:'',age:'',location:'',memo:'',generation,position:pos};
   STATE.nodes.push(n); return n;
 }
 function currentPos(node){
@@ -2135,9 +2307,10 @@ function openPersonModal(node,isNew,callback,subtitle=''){
     'f-lastJP':node.lastJP||'','f-firstJP':node.firstJP||'','f-middleJP':node.middleJP||'','f-maidenJP':node.maidenJP||'',
     'f-firstEN':node.firstEN||'','f-middleEN':node.middleEN||'','f-lastEN':node.lastEN||'','f-maidenEN':node.maidenEN||'',
     'f-gender':node.gender||'none','f-birth':node.birth||'','f-death':node.death||'',
-    'f-location':node.location||'','f-memo':node.memo||'',
+    'f-location':node.location||'','f-memo':node.memo||'','f-age':node.age||'',
   };
   Object.entries(flds).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
+  _updateAgeField();
   // コンボドロップ候補を構築
   const jpSurnameVals=[...new Set(STATE.nodes.flatMap(n=>[n.lastJP,n.maidenJP]).filter(Boolean))];
   const enSurnameVals=[...new Set(STATE.nodes.flatMap(n=>[n.lastEN,n.maidenEN]).filter(Boolean))];
@@ -2165,6 +2338,15 @@ function openPersonModal(node,isNew,callback,subtitle=''){
   setModalPage(1);
   if(window.matchMedia('(pointer:fine)').matches) setTimeout(()=>document.getElementById('f-lastJP').focus(),50);
 }
+function _updateAgeField(){
+  const birth=document.getElementById('f-birth').value.trim();
+  const death=document.getElementById('f-death').value.trim();
+  if(/^\d{4}$/.test(birth)&&!death){
+    document.getElementById('f-age').value=new Date().getFullYear()-parseInt(birth);
+  }
+}
+document.getElementById('f-birth').addEventListener('input',_updateAgeField);
+document.getElementById('f-death').addEventListener('input',_updateAgeField);
 let _modalPage=1;
 function setModalPage(p){
   _modalPage=p;
@@ -2206,6 +2388,7 @@ document.getElementById('modal-ok').addEventListener('click',()=>{
   _modalNode.death   =document.getElementById('f-death').value.trim();
   _modalNode.location=document.getElementById('f-location').value.trim();
   _modalNode.memo=(document.getElementById('f-memo')||{value:''}).value.trim();
+  _modalNode.age =(document.getElementById('f-age') ||{value:''}).value.trim();
   const _px=parseFloat(document.getElementById('f-pos-x').value);
   const _py=parseFloat(document.getElementById('f-pos-y').value);
   if(!isNaN(_px)&&!isNaN(_py)) _modalNode.position={x:_px,y:_py};
@@ -2315,6 +2498,7 @@ document.getElementById('edge-modal-overlay').addEventListener('click',function(
 const DISP_ITEMS=[
   {key:'lastName',lbl:'disp-lastName',tristate:true},{key:'firstName',lbl:'disp-firstName'},
   {key:'middleName',lbl:'disp-middleName',tristate:true},{key:'maidenName',lbl:'disp-maidenName'},
+  {key:'age',lbl:'disp-age'},
   {key:'birthDeath',lbl:'disp-birthDeath'},{key:'location',lbl:'disp-location'},
   {key:'customEdge',lbl:'disp-customEdge'},{key:'relationLabel',lbl:'disp-relationLabel'},
   {key:'genGuide',lbl:'disp-genGuide'},
@@ -2484,6 +2668,14 @@ document.addEventListener('keyup',e=>{
     render();
   }
   if(e.key==='d'||e.key==='D') _toggleDark();
+  const _setLang=mode=>{
+    STATE.langMode=mode;
+    document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===mode));
+    applyI18n(); render();
+  };
+  if(e.key==='j'||e.key==='J') _setLang('jp');
+  if(e.key==='m'||e.key==='M') _setLang('mx');
+  if(e.key==='u'||e.key==='U') _setLang('en');
 });
 function fitView(){
   if(!STATE.nodes.length) return;
@@ -2500,10 +2692,144 @@ function fitView(){
 }
 
 // ══════════════════════════════════════════════════════════════
+//  SAVE AS DIALOG
+// ══════════════════════════════════════════════════════════════
+let _saveasCb=null;
+function openSaveAs(defaultName,cb){
+  _saveasCb=cb;
+  const inp=document.getElementById('saveas-name');
+  inp.value=defaultName;
+  document.getElementById('saveas-overlay').classList.add('open');
+  setTimeout(()=>{inp.focus();inp.select();},60);
+}
+function _closeSaveAs(){ document.getElementById('saveas-overlay').classList.remove('open'); _saveasCb=null; }
+document.getElementById('saveas-ok').addEventListener('click',()=>{
+  const name=document.getElementById('saveas-name').value.trim()||document.getElementById('saveas-name').value;
+  const cb=_saveasCb;
+  _closeSaveAs();
+  if(cb) cb(name);
+});
+document.getElementById('saveas-cancel').addEventListener('click',_closeSaveAs);
+document.getElementById('saveas-overlay').addEventListener('click',function(e){if(e.target===this)_closeSaveAs();});
+document.getElementById('saveas-name').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){document.getElementById('saveas-ok').click();}
+  else if(e.key==='Escape'){_closeSaveAs();}
+});
+
+// ══════════════════════════════════════════════════════════════
+//  GOOGLE DRIVE
+// ══════════════════════════════════════════════════════════════
+let _gsiLoaded=false,_gapiPickerLoaded=false;
+let _tokenClient=null,_driveToken=null,_driveTokenExpiry=0;
+
+if(IS_VERCEL){
+  const s1=document.createElement('script');
+  s1.src='https://accounts.google.com/gsi/client';s1.async=true;
+  s1.onload=()=>{
+    _gsiLoaded=true;
+    _tokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:GDRIVE_CLIENT_ID,
+      scope:'https://www.googleapis.com/auth/drive.file',
+      callback:''
+    });
+  };
+  document.head.appendChild(s1);
+  const s2=document.createElement('script');
+  s2.src='https://apis.google.com/js/api.js';s2.async=true;
+  s2.onload=()=>{ gapi.load('picker',()=>{_gapiPickerLoaded=true;}); };
+  document.head.appendChild(s2);
+}
+
+function _getDriveToken(){
+  return new Promise((resolve,reject)=>{
+    if(_driveToken&&Date.now()<_driveTokenExpiry){resolve(_driveToken);return;}
+    if(!_gsiLoaded||!_tokenClient){reject(new Error(t('drive-not-ready')));return;}
+    _tokenClient.callback=(resp)=>{
+      if(resp.error){reject(new Error(resp.error));return;}
+      _driveToken=resp.access_token;
+      _driveTokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      resolve(_driveToken);
+    };
+    _tokenClient.requestAccessToken({prompt:_driveToken?'':'select_account'});
+  });
+}
+
+async function saveToDrive(filename,jsonStr){
+  const token=await _getDriveToken();
+  const meta=JSON.stringify({name:filename,mimeType:'application/json'});
+  const form=new FormData();
+  form.append('metadata',new Blob([meta],{type:'application/json'}));
+  form.append('file',new Blob([jsonStr],{type:'application/json'}));
+  const res=await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+    {method:'POST',headers:{Authorization:'Bearer '+token},body:form}
+  );
+  if(!res.ok) throw new Error(res.status+' '+res.statusText);
+  return res.json();
+}
+
+function loadFromDrive(callback){
+  _getDriveToken().then(token=>{
+    if(!_gapiPickerLoaded){alert(t('drive-not-ready'));return;}
+    const view=new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setIncludeFolders(false).setMimeTypes('application/json');
+    const picker=new google.picker.PickerBuilder()
+      .setTitle('FamilyTreeArchitect ファイルを選択')
+      .addView(view)
+      .setOAuthToken(token)
+      .setDeveloperKey(GDRIVE_API_KEY)
+      .setCallback(async(data)=>{
+        if(data.action===google.picker.Action.PICKED){
+          const file=data.docs[0];
+          const res=await fetch(
+            'https://www.googleapis.com/drive/v3/files/'+file.id+'?alt=media',
+            {headers:{Authorization:'Bearer '+token}}
+          );
+          if(!res.ok){alert(t('drive-load-fail')+res.status);return;}
+          callback(await res.text());
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  }).catch(err=>{alert(err.message);});
+}
+
+function showToast(msg){
+  const el=document.createElement('div');
+  el.className='toast-msg';el.textContent=msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},2500);
+}
+
+// ── Storage choice dialog ──────────────────────────────────────
+let _storageOnDevice=null,_storageOnDrive=null;
+function openStorageChoice(mode,onDevice,onDrive){
+  _storageOnDevice=onDevice; _storageOnDrive=onDrive;
+  document.getElementById('storage-choice-title').textContent=t(mode==='save'?'storage-save-title':'storage-load-title');
+  document.getElementById('choice-device-label').textContent=t(mode==='save'?'choice-device-save':'choice-device-load');
+  document.getElementById('choice-drive-label').textContent=t(mode==='save'?'choice-drive-save':'choice-drive-load');
+  document.getElementById('storage-choice-overlay').classList.add('open');
+}
+function _closeStorageChoice(){
+  document.getElementById('storage-choice-overlay').classList.remove('open');
+  _storageOnDevice=_storageOnDrive=null;
+}
+document.getElementById('choice-device').addEventListener('click',()=>{
+  const cb=_storageOnDevice; _closeStorageChoice(); if(cb) cb();
+});
+document.getElementById('choice-drive').addEventListener('click',()=>{
+  const cb=_storageOnDrive; _closeStorageChoice(); if(cb) cb();
+});
+document.getElementById('storage-choice-cancel').addEventListener('click',_closeStorageChoice);
+document.getElementById('storage-choice-overlay').addEventListener('click',function(e){if(e.target===this)_closeStorageChoice();});
+
+// ══════════════════════════════════════════════════════════════
 //  SAVE / LOAD
 // ══════════════════════════════════════════════════════════════
-document.getElementById('btn-save').addEventListener('click',()=>{
-  const data={appVersion:APP_VERSION,
+document.getElementById('btn-save').addEventListener('click',async()=>{
+  const defaultName='familytree-v.'+APP_VERSION+'-'+new Date().toISOString().slice(0,10)+'.ftajson';
+  const buildData=()=>({appVersion:APP_VERSION,
     createdVersion:STATE.createdVersion,updatedVersion:APP_VERSION,
     savedAt:new Date().toISOString(),
     langMode:STATE.langMode,writeMode:STATE.writeMode,disp:STATE.disp,
@@ -2514,68 +2840,118 @@ document.getElementById('btn-save').addEventListener('click',()=>{
       for(const k of Object.keys(n)){ if(!k.startsWith('_')) obj[k]=n[k]; }
       if(obj.position) obj.position={x:Math.round(obj.position.x*100)/100,y:Math.round(obj.position.y*100)/100};
       return obj;
-    }),edges:STATE.edges};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=Object.assign(document.createElement('a'),
-    {href:url,download:'familytree_'+new Date().toISOString().slice(0,10)+'_v.'+APP_VERSION+'.ftajson'});
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+    }),edges:STATE.edges});
+  const buildBlob=()=>new Blob([JSON.stringify(buildData(),null,2)],{type:'application/json'});
+
+  const doDeviceSave=async()=>{
+    if(window.showSaveFilePicker){
+      try{
+        const handle=await window.showSaveFilePicker({
+          suggestedName:defaultName,
+          types:[{description:'FamilyTree JSON',accept:{'application/json':['.ftajson','.json']}}]
+        });
+        const writable=await handle.createWritable();
+        await writable.write(buildBlob());
+        await writable.close();
+        return;
+      }catch(e){ if(e.name==='AbortError') return; }
+    }
+    openSaveAs(defaultName,(fname)=>{
+      const blob=buildBlob();
+      const url=URL.createObjectURL(blob);
+      const a=Object.assign(document.createElement('a'),{href:url,download:fname});
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+    });
+  };
+
+  if(IS_VERCEL){
+    openStorageChoice('save', doDeviceSave, async()=>{
+      try{
+        await saveToDrive(defaultName,JSON.stringify(buildData(),null,2));
+        showToast(t('drive-save-ok'));
+      }catch(e){alert('Google Drive: '+e.message);}
+    });
+  }else{
+    await doDeviceSave();
+  }
 });
+function _applyLoadedData(jsonText){
+  try{
+    const d=JSON.parse(jsonText);
+    Object.assign(STATE,{nodes:d.nodes||[],edges:d.edges||[],
+      nextNodeId:d.nextNodeId||(d.nextId||1),nextEdgeId:d.nextEdgeId||1,
+      guideMin:d.guideMin??-6,guideMax:d.guideMax??6,
+      guideLabels:d.guideLabels||[],
+      langMode:d.langMode||'en',writeMode:d.writeMode||'h',
+      createdVersion:d.createdVersion||d.appVersion||APP_VERSION,
+      updatedVersion:d.updatedVersion||d.appVersion||APP_VERSION});
+    if(d.disp){ Object.assign(STATE.disp,d.disp); }
+    else if(d.showDetail){ STATE.disp.birthDeath=true;STATE.disp.location=true;STATE.disp.maidenName=true; }
+    STATE.nodes.forEach(n=>{
+      if(n.nameJP!==undefined&&n.firstJP===undefined){
+        n.firstJP=n.nameJP||''; n.lastJP=''; n.middleJP='';
+      }
+      if(n.nameEN!==undefined&&n.firstEN===undefined){
+        const parts=(n.nameEN||'').trim().split(/\s+/).filter(Boolean);
+        n.firstEN=parts[0]||'';
+        n.lastEN=parts.length>1?parts[parts.length-1]:'';
+        n.middleEN=parts.length>2?parts.slice(1,-1).join(' '):'';
+      }
+      if(n.maidenJP===undefined) n.maidenJP=n.maidenNameJP||'';
+      if(n.maidenEN===undefined) n.maidenEN=n.maidenNameEN||n.maidenName||'';
+      if(n.memo===undefined) n.memo=n.birthOrder||'';
+    });
+    if(!d.appVersion||parseFloat(d.appVersion)<4){
+      STATE.nodes.forEach(n=>{ if(n.position) n.position.y=-(n.generation*GEN_GAP); });
+    }
+    STATE.nodes.forEach(n=>{
+      if(n.color!==undefined&&n.colorIdx===undefined){
+        const pals=[FAMILY_COLORS,FAMILY_COLORS_DARK];
+        for(const p of pals){const i=p.indexOf(n.color);if(i>=0){n.colorIdx=i;break;}}
+        delete n.color;
+      }
+    });
+    document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===STATE.langMode));
+    applyI18n(); render(); setTimeout(fitView,80);
+  }catch(err){alert(t('load-fail')+err.message);}
+}
+
 document.getElementById('file-input').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const d=JSON.parse(e.target.result);
-      Object.assign(STATE,{nodes:d.nodes||[],edges:d.edges||[],
-        nextNodeId:d.nextNodeId||(d.nextId||1),nextEdgeId:d.nextEdgeId||1,
-        guideMin:d.guideMin??-6,guideMax:d.guideMax??6,
-        guideLabels:d.guideLabels||[],
-        langMode:d.langMode||'en',writeMode:d.writeMode||'h',
-        createdVersion:d.createdVersion||d.appVersion||APP_VERSION,
-        updatedVersion:d.updatedVersion||d.appVersion||APP_VERSION});
-      if(d.disp){ Object.assign(STATE.disp,d.disp); }
-      else if(d.showDetail){ STATE.disp.birthDeath=true;STATE.disp.location=true;STATE.disp.maidenName=true; }
-      // 旧バージョン互換: nameJP/nameEN（v2系の単一フィールド）→ 分割フィールドに変換
-      STATE.nodes.forEach(n=>{
-        if(n.nameJP!==undefined&&n.firstJP===undefined){
-          n.firstJP=n.nameJP||''; n.lastJP=''; n.middleJP='';
-        }
-        if(n.nameEN!==undefined&&n.firstEN===undefined){
-          const parts=(n.nameEN||'').trim().split(/\s+/).filter(Boolean);
-          n.firstEN=parts[0]||'';
-          n.lastEN=parts.length>1?parts[parts.length-1]:'';
-          n.middleEN=parts.length>2?parts.slice(1,-1).join(' '):'';
-        }
-        if(n.maidenJP===undefined) n.maidenJP=n.maidenNameJP||'';
-        if(n.maidenEN===undefined) n.maidenEN=n.maidenNameEN||n.maidenName||'';
-        if(n.memo===undefined) n.memo=n.birthOrder||'';
-      });
-      // v4未満は座標系が異なる（GEN_GAP 180→100、v2.0は原点も異なる）ためpositionをリセット
-      if(!d.appVersion||parseFloat(d.appVersion)<4){
-        STATE.nodes.forEach(n=>{ if(n.position) n.position.y=-(n.generation*GEN_GAP); });
-      }
-      // 旧フォーマット: color(hex文字列) → colorIdx に変換
-      STATE.nodes.forEach(n=>{
-        if(n.color!==undefined&&n.colorIdx===undefined){
-          const pals=[FAMILY_COLORS,FAMILY_COLORS_DARK];
-          for(const p of pals){const i=p.indexOf(n.color);if(i>=0){n.colorIdx=i;break;}}
-          delete n.color;
-        }
-      });
-      document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===STATE.langMode));
-      applyI18n(); render(); setTimeout(fitView,80);
-    }catch(err){alert(t('load-fail')+err.message);}
-  };
+  reader.onload=e=>_applyLoadedData(e.target.result);
   reader.readAsText(file);this.value='';
 });
+
+if(IS_VERCEL){
+  document.getElementById('btn-load').addEventListener('click',(e)=>{
+    e.preventDefault();
+    openStorageChoice('load',
+      ()=>document.getElementById('file-input').click(),
+      ()=>loadFromDrive(_applyLoadedData)
+    );
+  });
+}
 
 // ══════════════════════════════════════════════════════════════
 //  PNG EXPORT
 // ══════════════════════════════════════════════════════════════
-document.getElementById('btn-png').addEventListener('click',exportPNG);
-async function exportPNG(){
+document.getElementById('btn-png').addEventListener('click',async()=>{
+  const defaultName='familytree-'+new Date().toISOString().slice(0,10)+'.png';
+  if(window.showSaveFilePicker){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:defaultName,
+        types:[{description:'PNG Image',accept:{'image/png':['.png']}}]
+      });
+      await exportPNG(null,handle);
+      return;
+    }catch(e){ if(e.name==='AbortError') return; }
+  }
+  openSaveAs(defaultName,fname=>exportPNG(fname,null));
+});
+async function exportPNG(fname,fileHandle){
   const overlay=document.getElementById('pdf-overlay');
   const statusEl=document.getElementById('pdf-status');
   overlay.classList.add('open');statusEl.textContent=t('png-preparing');
@@ -2632,10 +3008,17 @@ async function exportPNG(){
     });
     statusEl.textContent=t('png-downloading');
     await new Promise(r=>setTimeout(r,40));
-    const a=document.createElement('a');
-    a.download='familytree_'+new Date().toISOString().slice(0,10)+'.png';
-    a.href=canvas.toDataURL('image/png');
-    a.click();
+    if(fileHandle){
+      const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+      const writable=await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    }else{
+      const a=document.createElement('a');
+      a.download=fname;
+      a.href=canvas.toDataURL('image/png');
+      a.click();
+    }
   }catch(err){console.error(err);alert(t('png-fail')+err.message);}
   finally{overlay.classList.remove('open');}
 }
@@ -2656,6 +3039,7 @@ function inlineStylesForExport(root,dark){
     'e-symbol':        {fill:nodeBorder,'font-size':'18','text-anchor':'middle','dominant-baseline':'central','font-family':F},
     'e-symbol-cross':  {fill:nodeBorder,'font-size':'22','text-anchor':'middle','dominant-baseline':'central','font-family':F},
     'node-text-name':  {fill:nodeBorder,'font-size':'12','text-anchor':'middle','dominant-baseline':'central','font-family':F},
+    'node-text-age':   {fill:fg3,'font-size':'8','text-anchor':'middle','dominant-baseline':'central','font-family':F},
     'node-text-maiden':{fill:fg3,'font-size':'8','text-anchor':'middle','dominant-baseline':'central','font-family':F},
     'node-text-sub':   {fill:fg3,'font-size':'8','text-anchor':'middle','dominant-baseline':'central','font-family':F},
     'node-shape':      {fill:bg,stroke:nodeBorder,'stroke-width':'1.6'},
