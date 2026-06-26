@@ -485,11 +485,9 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
   <div id="storage-choice-box">
     <h2 id="storage-choice-title"></h2>
     <button class="storage-choice-btn" id="choice-device">
-      <span style="font-size:15px">💾</span>
       <span id="choice-device-label"></span>
     </button>
     <button class="storage-choice-btn" id="choice-drive">
-      <span style="font-size:15px">☁</span>
       <span id="choice-drive-label"></span>
     </button>
     <button id="storage-choice-cancel" data-i18n="btn-cancel">キャンセル</button>
@@ -2729,7 +2727,7 @@ if(IS_VERCEL){
     _gsiLoaded=true;
     _tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:GDRIVE_CLIENT_ID,
-      scope:'https://www.googleapis.com/auth/drive.file',
+      scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
       callback:''
     });
   };
@@ -2771,11 +2769,14 @@ async function saveToDrive(filename,jsonStr){
 function loadFromDrive(callback){
   _getDriveToken().then(token=>{
     if(!_gapiPickerLoaded){alert(t('drive-not-ready'));return;}
-    const view=new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(false).setMimeTypes('application/json');
+    const myView=new google.picker.DocsView()
+      .setIncludeFolders(false).setMimeTypes('application/json').setOwnedByMe(true);
+    const sharedView=new google.picker.DocsView()
+      .setIncludeFolders(false).setMimeTypes('application/json').setOwnedByMe(false);
     const picker=new google.picker.PickerBuilder()
       .setTitle('FamilyTreeArchitect ファイルを選択')
-      .addView(view)
+      .addView(myView)
+      .addView(sharedView)
       .setOAuthToken(token)
       .setDeveloperKey(GDRIVE_API_KEY)
       .setCallback(async(data)=>{
