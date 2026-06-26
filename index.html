@@ -2927,7 +2927,17 @@ if(IS_VERCEL){
   document.getElementById('btn-load').addEventListener('click',(e)=>{
     e.preventDefault();
     openStorageChoice('load',
-      ()=>document.getElementById('file-input').click(),
+      ()=>{
+        const inp=document.createElement('input');
+        inp.type='file'; inp.accept='.ftajson,.json'; inp.style.display='none';
+        inp.addEventListener('change',function(){
+          const file=this.files[0]; if(!file) return;
+          const reader=new FileReader();
+          reader.onload=e=>_applyLoadedData(e.target.result);
+          reader.readAsText(file); inp.remove();
+        });
+        document.body.appendChild(inp); inp.click();
+      },
       ()=>loadFromDrive(_applyLoadedData)
     );
   });
