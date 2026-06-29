@@ -1713,24 +1713,30 @@ function removeFO(gSel){ gSel.selectAll('foreignObject').remove(); }
 // できるだけ中央寄りの区切りを選ぶ。
 function splitNameForWidth(text,nodeWidth){
   if(!text) return [''];
-  // 1文字あたりの概算幅(px) — 日本語/英語混在を考慮した経験値
-  const CHAR_W=7.2;
-  const PAD=12; // ノード内側の余白
-  const maxChars=Math.max(4,Math.floor((nodeWidth-PAD)/CHAR_W));
-  if(text.length<=maxChars) return [text];
+  const PAD=12;
+  const maxW=nodeWidth-PAD;
+  // U+3000以上はCJK・かな・カタカナ等の全角文字として幅を広めに見積もる
+  const cw=ch=>ch.codePointAt(0)>=0x3000?12:7.2;
+  const tw=s=>[...s].reduce((a,ch)=>a+cw(ch),0);
+  if(tw(text)<=maxW) return [text];
 
   const words=text.split(' ').filter(w=>w.length>0);
   if(words.length<=1){
-    // スペースがない1語の場合は文字数で機械的に2分割
+    // スペースなし: 累積幅が半分を超えた位置で2分割
+    let acc=0;
+    const half=tw(text)/2;
+    const chars=[...text];
+    for(let i=0;i<chars.length;i++){
+      acc+=cw(chars[i]);
+      if(acc>=half) return [chars.slice(0,i+1).join(''),chars.slice(i+1).join('')];
+    }
     const mid=Math.ceil(text.length/2);
     return [text.slice(0,mid),text.slice(mid)];
   }
-  // 累積幅が半分を超える直前の区切りで2行に分ける（できるだけ中央に近い分割点）
+  // スペースあり: 両行の幅差が最小になる区切りを選ぶ
   let best=1,bestDiff=Infinity;
   for(let i=1;i<words.length;i++){
-    const line1=words.slice(0,i).join(' ');
-    const line2=words.slice(i).join(' ');
-    const diff=Math.abs(line1.length-line2.length);
+    const diff=Math.abs(tw(words.slice(0,i).join(' '))-tw(words.slice(i).join(' ')));
     if(diff<bestDiff){ bestDiff=diff; best=i; }
   }
   return [words.slice(0,best).join(' '),words.slice(best).join(' ')];
