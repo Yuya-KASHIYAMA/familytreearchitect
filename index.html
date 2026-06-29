@@ -813,7 +813,7 @@ const T={
     'disp-sec1-title':'表示 / 非表示',
     'disp-sec1-hint':'（「姓」「ミドルネーム」はもう一度押すとイニシャルになります）',
     'disp-sec2-title':'その他の設定',
-    'disp-vertical':'縦書き','disp-dark':'ダーク',
+    'disp-vertical':'縦書き','disp-dark':'ダーク','disp-westernOrder':'西洋順',
     'disp-lastName':'姓','disp-firstName':'名',
     'disp-middleName':'ミドルネーム','disp-maidenName':'旧姓',
     'disp-birthDeath':'生没年','disp-location':'場所',
@@ -925,7 +925,7 @@ const T={
     'disp-sec1-title':'Show / Hide Information',
     'disp-sec1-hint':'(Tap Family Name and Middle Name again to turn them into Initials)',
     'disp-sec2-title':'Other Settings',
-    'disp-vertical':'Vertical','disp-dark':'Dark',
+    'disp-vertical':'Vertical','disp-dark':'Dark','disp-westernOrder':'Western',
     'disp-lastName':'Family Name','disp-firstName':'Given Name',
     'disp-middleName':'Middle Name','disp-maidenName':'Maiden Name',
     'disp-birthDeath':'Birth/Death','disp-location':'Location',
@@ -1028,6 +1028,7 @@ const STATE={nodes:[],edges:[],langMode:'mx',writeMode:'h',
     lastName:'show', firstName:true, middleName:'hide',
     maidenName:false, birthDeath:false, location:false, age:false,
     customEdge:true, relationLabel:true, genGuide:true, guideCustomLabel:true,
+    westernOrder:false,
   },
 };
 function uid(){  return 'n'+(STATE.nextNodeId++); }
@@ -1155,18 +1156,31 @@ function buildNameJP_western(n){
 function buildNameJP_raw(n){
   return [n.lastJP,n.middleJP,n.firstJP].filter(Boolean).join(' ');
 }
+function buildNameEN_jp(n){
+  const d=STATE.disp;
+  const parts=[];
+  const last=applyNameModeEN(d.lastName,n.lastEN,n.lastJP);
+  const mid =applyNameModeEN(d.middleName,n.middleEN,n.middleJP);
+  if(last) parts.push(last);
+  if(mid)  parts.push(mid);
+  if(d.firstName){ const fn=n.firstEN||n.firstJP; if(fn) parts.push(fn); }
+  if(!parts.length) return '—';
+  return parts.join(' ');
+}
 function displayName(n){
   if(!n) return '—';
   const hasJP=!!(n.lastJP||n.firstJP||n.middleJP);
+  const loc=(n.location||'').toLowerCase();
+  const isJapan=loc.includes('日本')||loc.includes('japan')||(loc===''&&!STATE.disp.westernOrder);
   if(STATE.langMode==='jp'){
     if(!hasJP) return buildNameEN(n);
-    const loc=(n.location||'').toLowerCase();
-    const isJapan=loc.includes('日本')||loc.includes('japan');
     return isJapan?buildNameJP(n):buildNameJP_western(n);
   }
-  if(STATE.langMode==='en') return buildNameEN(n);
-  const loc=(n.location||'').toLowerCase();
-  const isJapan=loc.includes('日本')||loc.includes('japan');
+  if(STATE.langMode==='en'){
+    const hasEN=!!(n.lastEN||n.firstEN||n.middleEN);
+    if(!hasEN) return isJapan?buildNameJP(n):buildNameJP_western(n);
+    return isJapan?buildNameEN_jp(n):buildNameEN(n);
+  }
   if(isJapan&&hasJP) return buildNameJP(n);
   return buildNameEN(n);
 }
@@ -1175,7 +1189,8 @@ function displayMaiden(n){
   if(STATE.langMode==='jp') return n.maidenJP||'';
   if(STATE.langMode==='en') return n.maidenEN||'';
   const loc=(n.location||'').toLowerCase();
-  return (loc.includes('日本')||loc.includes('japan'))?(n.maidenJP||''):(n.maidenEN||'');
+  const isJapan=loc.includes('日本')||loc.includes('japan')||(loc===''&&!STATE.disp.westernOrder);
+  return isJapan?(n.maidenJP||''):(n.maidenEN||'');
 }
 // 旧姓の表示ラベル整形: JP→「旧姓 XXXX」 / EN・mix→「née XXXX」
 function formatMaidenLabel(maiden){
@@ -2582,6 +2597,17 @@ function buildDispPanel(){
     updateDarkBtn();
   });
   otherContainer.appendChild(darkBtn);
+
+  const woBtn=document.createElement('button');
+  woBtn.textContent=t('disp-westernOrder');
+  applyDispBtnStyle(woBtn,STATE.disp.westernOrder);
+  woBtn.addEventListener('click',()=>{
+    STATE.disp.westernOrder=!STATE.disp.westernOrder;
+    localStorage.setItem('westernOrder',STATE.disp.westernOrder?'1':'0');
+    applyDispBtnStyle(woBtn,STATE.disp.westernOrder);
+    render();
+  });
+  otherContainer.appendChild(woBtn);
 }
 document.getElementById('btn-detail').addEventListener('click',()=>{
   const panel=document.getElementById('display-panel');
@@ -2599,6 +2625,7 @@ document.getElementById('display-panel-backdrop').addEventListener('click',()=>{
 document.querySelectorAll('[data-lang]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     STATE.langMode=btn.dataset.lang;
+    localStorage.setItem('langMode',STATE.langMode);
     document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b===btn));
     applyI18n(); render();
   });
@@ -2676,8 +2703,15 @@ document.addEventListener('keyup',e=>{
     render();
   }
   if(e.key==='d'||e.key==='D') _toggleDark();
+  if(e.key==='w'||e.key==='W'){
+    STATE.disp.westernOrder=!STATE.disp.westernOrder;
+    localStorage.setItem('westernOrder',STATE.disp.westernOrder?'1':'0');
+    if(document.getElementById('display-panel').style.display==='block') buildDispPanel();
+    render();
+  }
   const _setLang=mode=>{
     STATE.langMode=mode;
+    localStorage.setItem('langMode',mode);
     document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===mode));
     applyI18n(); render();
   };
@@ -3324,6 +3358,10 @@ function _onboardStep3(){
 // <title> も APP_VERSION から自動生成（手動更新によるズレを防止）
 document.title='FamilyTreeArchitect v'+APP_VERSION;
 if(localStorage.getItem('darkMode')==='1') document.documentElement.classList.add('dark');
+const _lsLang=localStorage.getItem('langMode');
+if(_lsLang){ STATE.langMode=_lsLang; document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===_lsLang)); }
+const _lsWestern=localStorage.getItem('westernOrder');
+if(_lsWestern!==null) STATE.disp.westernOrder=_lsWestern==='1';
 applyI18n();
 setTimeout(()=>{
   const el=document.getElementById('svg-canvas');
