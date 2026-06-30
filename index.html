@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FamilyTreeArchitect v4.5</title>
+<title>FamilyTreeArchitect v5.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@300;400;500&family=BIZ+UDPMincho:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -113,8 +113,8 @@ body{font-family:var(--sans);color:var(--fg);display:flex;flex-direction:column}
   fill:var(--bg);stroke:var(--node-border);stroke-width:1.6;
   transition:stroke-width .15s;
 }
-.node:hover rect,.node:hover path,.node:hover .node-shape{stroke-width:2.6}
-.node.selected rect,.node.selected path,.node.selected .node-shape{stroke-width:2.8;stroke:var(--fg-selected)}
+.node:hover rect,.node:hover path,.node:hover .node-shape{stroke-width:2.0}
+.node.selected rect,.node.selected path,.node.selected .node-shape{stroke-width:3.0;stroke:var(--fg-selected)}
 .node-text-name{
   fill:var(--node-border);font-size:12px;dominant-baseline:central;text-anchor:middle;
   pointer-events:none;
@@ -1487,6 +1487,7 @@ function render(){
   nodeSel.exit().remove();
   let _dragStartPositions=null;
   let _dragStartGuideOffsets=null;
+  let _dragMoved=false;
 
   const nodeEnter=nodeSel.enter().append('g').attr('class','node')
     .call(d3.drag()
@@ -1494,12 +1495,19 @@ function render(){
         d3.select(this).raise();
         if(e.sourceEvent.shiftKey){
           _shiftWasSelected=_selectedIds.has(d.id);
-          _selectedIds.add(d.id);
+          if(_shiftWasSelected){
+            _selectedIds.delete(d.id);
+            d3.select(this).attr('class','node'); // 直接DOM更新で即座に反映
+          } else {
+            _selectedIds.add(d.id);
+            d3.select(this).attr('class','node selected');
+          }
         } else if(!_selectedIds.has(d.id)){
           _selectedIds=new Set([d.id]);
           _selectedGuideGens=new Set();
           render();
         }
+        _dragMoved=false;
         // 選択中の全ノードの開始位置を記録
         _dragStartPositions=new Map();
         STATE.nodes.filter(n=>_selectedIds.has(n.id)).forEach(n=>{
@@ -1513,6 +1521,12 @@ function render(){
       })
       .on('drag',(e,d)=>{
         if(!_dragStartPositions) return;
+        if(!_dragMoved&&_shiftWasSelected){
+          // 解除後に実際にドラッグ開始 → ノードを再追加してドラッグ対象に含める
+          _selectedIds.add(d.id);
+          _dragStartPositions.set(d.id,{x:d._x||0,y:d._y||0});
+        }
+        _dragMoved=true;
         const dx=e.x-d._dragOriginPointer.x;
         const dy=e.y-d._dragOriginPointer.y;
 
@@ -1543,19 +1557,18 @@ function render(){
         });
         render();
       })
-      .on('end',()=>{ _dragStartPositions=null; _dragStartGuideOffsets=null; render(); })
+      .on('end',()=>{
+        _dragStartPositions=null; _dragStartGuideOffsets=null; _dragMoved=false; render();
+      })
     )
     .on('click',(e,d)=>{
       e.stopPropagation();
-      if(e.shiftKey){
-        if(_shiftWasSelected) _selectedIds.delete(d.id);
-        // 未選択だった場合はdrag.startで追加済みなのでそのまま
-      } else {
+      if(!e.shiftKey){
         _selectedIds=new Set([d.id]);
         _selectedGuideGens=new Set();
+        render();
+        showPopup(e,d);
       }
-      render();
-      if(!e.shiftKey) showPopup(e,d);
     })
     .on('mouseenter',(e,d)=>{
       if(!d.memo) return;
